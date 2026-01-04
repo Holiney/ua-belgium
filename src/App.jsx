@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-
+// Вставте сюди URL, який ви отримали на кроці 7
+const GOOGLE_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbzgovsIQyZPGdeWR-x4UBuoJRNtSM7n3Q7QYDWg2VTdRuR2RrmXSrriV7Uw8a82FmMc9Q/exec";
 // === Повна локалізація ===
 const translations = {
   ua: {
@@ -973,6 +975,7 @@ const Task3PrintRooms = ({ lang }) => {
   const [selectedRoom, setSelectedRoom] = useState(PRINT_ROOMS[0]);
   const [printData, setPrintData] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [toast, setToast] = useState({
     show: false,
     message: "",
@@ -1008,7 +1011,10 @@ const Task3PrintRooms = ({ lang }) => {
     );
   };
 
+  // Ця функція критично важлива для відображення кнопок
   const getOptionsForItem = (item) => {
+    if (!item) return []; // Захист від пустих значень
+
     switch (item) {
       case "EK 1":
       case "EK 2":
@@ -1041,9 +1047,10 @@ const Task3PrintRooms = ({ lang }) => {
       case "EK 17":
       case "EK 18":
       case "EK 19":
-        return ["–", 1]; // 1, - (represented as 0 and –)
+        return ["–", 1]; // 1, -
       default:
-        return Array.from({ length: 21 }, (_, i) => i); // Default 0-20
+        // Якщо назва не співпала, повертаємо стандартний масив, щоб не було помилки
+        return Array.from({ length: 21 }, (_, i) => i);
     }
   };
 
@@ -1051,10 +1058,60 @@ const Task3PrintRooms = ({ lang }) => {
     setPrintData((prev) => ({ ...prev, [item]: count }));
   };
 
+  const handleSync = async () => {
+    const hasData = Object.values(printData).some(
+      (val) => val > 0 || val === 0
+    );
+
+    if (!hasData) {
+      showToast(t(lang, "noDataToSave"), "error");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Відправити дані для кімнати ${selectedRoom} в Google Таблицю?`
+      )
+    ) {
+      return;
+    }
+
+    setIsSyncing(true);
+    const todayKey = getTodayKey();
+
+    try {
+      const payload = {
+        date: todayKey,
+        room: selectedRoom,
+        items: printData,
+      };
+
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      vibrateDevice("success");
+      showToast("Дані успішно відправлено в хмару!", "success");
+    } catch (error) {
+      console.error(error);
+      vibrateDevice("error");
+      showToast("Помилка з'єднання", "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleCopy = () => {
     const entries = [];
     Object.entries(printData).forEach(([item, count]) => {
-      if (count > 0 || (count === 0 && getOptionsForItem(item).includes("–"))) {
+      // Тут теж потрібна безпечна перевірка
+      const options = getOptionsForItem(item);
+      if (count > 0 || (count === 0 && options.includes("–"))) {
         entries.push(`${item}: ${count === 0 ? "–" : count}`);
       }
     });
@@ -1097,13 +1154,11 @@ const Task3PrintRooms = ({ lang }) => {
           {PRINT_ROOMS.map((room) => (
             <button
               key={room}
-              onClick={() => {
-                setSelectedRoom(room);
-              }}
+              onClick={() => setSelectedRoom(room)}
               className={`py-2 px-3 text-sm font-bold rounded-lg shadow transition hover:scale-[1.02] active:scale-[0.98] transition-transform ${
                 selectedRoom === room
                   ? "bg-purple-600 text-white"
-                  : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-[hsl(var(--border))] hover:bg-purple-50 dark:hover:bg-purple-900 active:bg-purple-100 dark:active:bg-purple-800"
+                  : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-[hsl(var(--border))]"
               }`}
             >
               {room}
@@ -1112,36 +1167,51 @@ const Task3PrintRooms = ({ lang }) => {
         </div>
 
         <div className="space-y-2">
-          {PRINT_ITEMS.map((item) => (
-            <button
-              key={item}
-              onClick={() => {
-                setSelectedItem(item);
-              }}
-              className={`w-full rounded-lg shadow transition px-4 py-2 hover:scale-[1.02] active:scale-[0.98] transition-transform flex items-center justify-between bg-purple-50 dark:bg-purple-900 hover:bg-purple-100 dark:hover:bg-purple-800 active:bg-purple-200 dark:active:bg-purple-700 text-purple-800 dark:text-purple-200`}
-            >
-              <span className="font-medium text-left">{item}</span>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-3 py-1 rounded-lg text-sm font-bold bg-purple-600 text-white`}
-                >
-                  {printData[item] ??
-                    (getOptionsForItem(item).includes("–") ? "–" : 0)}
-                </span>
-                <span className="text-gray-400 dark:text-gray-500">▶</span>
-              </div>
-            </button>
-          ))}
+          {PRINT_ITEMS.map((item) => {
+            // Безпечне отримання опцій для рендеру
+            const options = getOptionsForItem(item);
+            const displayValue =
+              printData[item] ?? (options.includes("–") ? "–" : 0);
+
+            return (
+              <button
+                key={item}
+                onClick={() => setSelectedItem(item)}
+                className={`w-full rounded-lg shadow transition px-4 py-2 hover:scale-[1.02] active:scale-[0.98] transition-transform flex items-center justify-between bg-purple-50 dark:bg-purple-900 text-purple-800 dark:text-purple-200`}
+              >
+                <span className="font-medium text-left">{item}</span>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-lg text-sm font-bold bg-purple-600 text-white">
+                    {displayValue}
+                  </span>
+                  <span className="text-gray-400 dark:text-gray-500">▶</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
         <button
           onClick={handleCopy}
-          className="w-full bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-lg shadow transition px-4 py-2 hover:scale-[1.02] active:scale-[0.98] transition-transform font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+          className="bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-lg shadow px-4 py-2 font-semibold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform"
         >
           <span className="text-xl">📋</span>
           {t(lang, "copy")}
+        </button>
+
+        <button
+          onClick={handleSync}
+          disabled={isSyncing}
+          className={`bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-lg shadow px-4 py-2 font-semibold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {isSyncing ? (
+            <span className="animate-spin">↻</span>
+          ) : (
+            <span className="text-xl">☁️</span>
+          )}
+          Google
         </button>
       </div>
 
@@ -2032,7 +2102,7 @@ export default function App() {
         <div className="text-center mt-6 mx-4">
           <div className="flex items-center justify-center gap-2">
             <span className="text-xs text-gray-400 dark:text-gray-500">
-              Work Statistics PWA v1.65 🚀
+              Work Statistics PWA v1.7 🚀
             </span>
           </div>
         </div>
