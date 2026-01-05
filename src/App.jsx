@@ -6,6 +6,7 @@ import { ServicesPage, ServiceProfilePage } from './components/ServicesPage';
 import { MarketplacePage } from './components/MarketplacePage';
 import { VehiclesPage } from './components/VehiclesPage';
 import { TransportPage } from './components/TransportPage';
+import { NewsPage, NewsDetailPage } from './components/NewsPage';
 import { loadFromStorage, saveToStorage } from './utils/storage';
 
 export default function App() {
@@ -21,6 +22,16 @@ export default function App() {
     root.classList.add(theme);
     saveToStorage('app-theme', theme);
   }, [theme]);
+
+  // Handle hardware back button on mobile
+  useEffect(() => {
+    const handleBackButton = () => {
+      goBack();
+    };
+
+    window.addEventListener('app-back-button', handleBackButton);
+    return () => window.removeEventListener('app-back-button', handleBackButton);
+  }, [navigationHistory, page, pageParams]);
 
   // Navigation handler
   const navigate = (newPage, params = {}) => {
@@ -72,7 +83,11 @@ export default function App() {
       case 'vehicles':
         return { title: 'Автомобілі', showBack: false };
       case 'transport':
-        return { title: 'Транспорт UA ↔ BE', showBack: false };
+        return { title: 'Перевезення UA ↔ BE', showBack: false };
+      case 'news':
+        return { title: 'Новини', showBack: false };
+      case 'news-detail':
+        return { title: 'Новина', showBack: true };
       default:
         return { title: 'UA Belgium', showBack: false };
     }
@@ -150,6 +165,17 @@ export default function App() {
 
         {page === 'transport' && (
           <TransportPage />
+        )}
+
+        {page === 'news' && (
+          <NewsPage onNavigate={navigate} />
+        )}
+
+        {page === 'news-detail' && (
+          <NewsDetailPage
+            newsId={pageParams.newsId}
+            onBack={goBack}
+          />
         )}
       </PageContainer>
 

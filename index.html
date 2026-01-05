@@ -52,6 +52,16 @@
         user-select: text;
       }
 
+      /* Disable pull-to-refresh */
+      body {
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      html {
+        overscroll-behavior: none;
+      }
+
       .pwa-splash {
         position: fixed;
         top: 0;
@@ -142,6 +152,25 @@
           });
         }
       };
+
+      // Handle back button on mobile - prevent app from closing
+      // This works by adding a history entry and listening to popstate
+      window.addEventListener('load', () => {
+        // Add initial state
+        if (!window.history.state) {
+          window.history.pushState({ page: 'app' }, '', '');
+        }
+
+        // Listen for back button
+        window.addEventListener('popstate', (event) => {
+          // Prevent default back navigation that would close the app
+          // Instead, dispatch custom event that React will handle
+          window.dispatchEvent(new CustomEvent('app-back-button'));
+
+          // Keep a state in history so back button doesn't close app
+          window.history.pushState({ page: 'app' }, '', '');
+        });
+      });
     </script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-import { Home, BookOpen, Briefcase, ShoppingBag, Car, Truck, ArrowLeft } from 'lucide-react';
+import { Home, BookOpen, Briefcase, ShoppingBag, Car, Truck, Newspaper, ArrowLeft } from 'lucide-react';
 
 export function Header({ title, showBack, onBack }) {
   return (
@@ -30,11 +30,11 @@ export function Header({ title, showBack, onBack }) {
 export function BottomNav({ currentPage, onNavigate }) {
   const navItems = [
     { id: 'home', label: 'Головна', icon: Home },
+    { id: 'news', label: 'Новини', icon: Newspaper },
     { id: 'guides', label: 'Гайди', icon: BookOpen },
     { id: 'services', label: 'Послуги', icon: Briefcase },
     { id: 'marketplace', label: 'Товари', icon: ShoppingBag },
-    { id: 'vehicles', label: 'Авто', icon: Car },
-    { id: 'transport', label: 'Транспорт', icon: Truck },
+    { id: 'transport', label: 'Перевезення', icon: Truck },
   ];
 
   return (
