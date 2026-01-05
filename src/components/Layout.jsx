@@ -1,4 +1,4 @@
-import { Home, BookOpen, Briefcase, ArrowLeft } from 'lucide-react';
+import { Home, BookOpen, Briefcase, ShoppingBag, Car, Truck, ArrowLeft } from 'lucide-react';
 
 export function Header({ title, showBack, onBack }) {
   return (
@@ -32,6 +32,9 @@ export function BottomNav({ currentPage, onNavigate }) {
     { id: 'home', label: 'Головна', icon: Home },
     { id: 'guides', label: 'Гайди', icon: BookOpen },
     { id: 'services', label: 'Послуги', icon: Briefcase },
+    { id: 'marketplace', label: 'Товари', icon: ShoppingBag },
+    { id: 'vehicles', label: 'Авто', icon: Car },
+    { id: 'transport', label: 'Транспорт', icon: Truck },
   ];
 
   return (
