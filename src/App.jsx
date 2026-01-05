@@ -3,6 +3,9 @@ import { Header, BottomNav, PageContainer } from './components/Layout';
 import { HomePage } from './components/HomePage';
 import { GuidesPage, CategoryPage, ArticlePage } from './components/GuidesPage';
 import { ServicesPage, ServiceProfilePage } from './components/ServicesPage';
+import { MarketplacePage } from './components/MarketplacePage';
+import { VehiclesPage } from './components/VehiclesPage';
+import { TransportPage } from './components/TransportPage';
 import { loadFromStorage, saveToStorage } from './utils/storage';
 
 export default function App() {
@@ -64,6 +67,12 @@ export default function App() {
         return { title: 'Каталог послуг', showBack: false };
       case 'service':
         return { title: 'Спеціаліст', showBack: true };
+      case 'marketplace':
+        return { title: 'Маркетплейс', showBack: false };
+      case 'vehicles':
+        return { title: 'Автомобілі', showBack: false };
+      case 'transport':
+        return { title: 'Транспорт UA ↔ BE', showBack: false };
       default:
         return { title: 'UA Belgium', showBack: false };
     }
@@ -83,6 +92,8 @@ export default function App() {
           overflow: hidden;
         }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       <Header
@@ -127,6 +138,18 @@ export default function App() {
             serviceId={pageParams.serviceId}
             onBack={goBack}
           />
+        )}
+
+        {page === 'marketplace' && (
+          <MarketplacePage />
+        )}
+
+        {page === 'vehicles' && (
+          <VehiclesPage />
+        )}
+
+        {page === 'transport' && (
+          <TransportPage />
         )}
       </PageContainer>
 
