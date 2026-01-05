@@ -1,3 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 200"><rect width="200" height="200" fill="url('#gradient')"></rect><defs><linearGradient id="SvgjsLinearGradient1001" gradientTransform="rotate(45 0.5 0.5)"><stop offset="0%" stop-color="#e3af29"></stop><stop offset="100%" stop-color="#db3d08"></stop></linearGradient></defs><g><g fill="#2c3431" transform="matrix(12.237362637362637,0,0,12.237362637362637,16.72310453797435,187.00702485199812)" stroke="#7d836e" stroke-width="0.2"><path d="M8.87 0L6.36-5.02L4.50-5.02L4.50 0L1.07 0L1.07-14.22L6.67-14.22Q9.20-14.22 10.63-13.10Q12.05-11.97 12.05-9.92L12.05-9.92Q12.05-8.44 11.45-7.46Q10.85-6.48 9.57-5.88L9.57-5.88L12.54-0.15L12.54 0L8.87 0ZM4.50-11.57L4.50-7.67L6.67-7.67Q7.65-7.67 8.14-8.18Q8.63-8.69 8.63-9.61Q8.63-10.53 8.13-11.05Q7.64-11.57 6.67-11.57L6.67-11.57L4.50-11.57Z"></path></g></g></svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
-@media (prefers-color-scheme: dark) { :root { filter: none; } }
-</style></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="yellowGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Фон - синій та жовтий як український прапор -->
+  <rect width="512" height="256" fill="url(#blueGradient)"/>
+  <rect y="256" width="512" height="256" fill="url(#yellowGradient)"/>
+
+  <!-- Білий круг для контрасту -->
+  <circle cx="256" cy="256" r="200" fill="white" opacity="0.95"/>
+
+  <!-- Літери UA з українським акцентом -->
+  <g transform="translate(256, 256)">
+    <!-- U -->
+    <path d="M -110 -80 L -110 20 Q -110 60 -70 60 Q -30 60 -30 20 L -30 -80"
+          fill="none" stroke="url(#blueGradient)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- A -->
+    <path d="M 10 60 L 60 -80 L 110 60 M 30 10 L 90 10"
+          fill="none" stroke="url(#yellowGradient)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Декоративні елементи - маленькі зірки/акценти -->
+  <circle cx="100" cy="120" r="8" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="412" cy="140" r="6" fill="#3b82f6" opacity="0.6"/>
+  <circle cx="130" cy="390" r="7" fill="#3b82f6" opacity="0.6"/>
+  <circle cx="390" cy="370" r="8" fill="#fbbf24" opacity="0.6"/>
+</svg>
