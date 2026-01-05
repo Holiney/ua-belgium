@@ -1,13 +1,65 @@
-# React + Vite
+# Work Statistics App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Progressive Web App (PWA) для збору статистики роботи: персонал, транспорт та канцелярські товари.
 
-Currently, two official plugins are available:
+## Особливості
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 📊 Три модулі: Персонал, Велосипеди, Канцелярія
+- 🌐 Підтримка 3 мов: Українська, English, Nederlands
+- 🌙 Темна/Світла тема
+- 📱 PWA з офлайн підтримкою
+- 💾 Локальне збереження даних
+- 📈 Історія всіх збережених записів
+- ☁️ Синхронізація з Google Sheets
 
-## Expanding the ESLint configuration
+## Структура проекту
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# work-statistics-app
+```
+src/
+├── components/          # React компоненти
+│   ├── BottomSheet.jsx
+│   ├── Counter.jsx
+│   ├── HistoryView.jsx
+│   ├── NumberGrid.jsx
+│   ├── PWAInstallBanner.jsx
+│   ├── SettingsView.jsx
+│   ├── Task1PersonnelCars.jsx
+│   ├── Task2BikeParking.jsx
+│   ├── Task3PrintRooms.jsx
+│   └── Toast.jsx
+├── constants/           # Константи та переклади
+│   ├── translations.js
+│   └── zones.js
+├── utils/              # Утиліти та хелпери
+│   ├── helpers.js
+│   └── storage.js
+├── App.jsx             # Головний компонент
+├── main.jsx
+└── index.css
+```
+
+## Встановлення
+
+```bash
+npm install
+```
+
+## Розробка
+
+```bash
+npm run dev
+```
+
+## Білд
+
+```bash
+npm run build
+```
+
+## Технології
+
+- React 19
+- Vite 7
+- Tailwind CSS 4
+- LocalStorage API
+- Service Workers
