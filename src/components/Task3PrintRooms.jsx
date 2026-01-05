@@ -7,7 +7,7 @@ import {
   LIMITED_ROOMS,
   BACKEND_URL,
 } from "../constants/zones";
-import { loadFromStorage, saveToStorage, getTodayKey } from "../utils/storage";
+import { loadFromStorage, saveToStorage, getCurrentWeekKey } from "../utils/storage";
 import { vibrateDevice } from "../utils/helpers";
 import { Toast } from "./Toast";
 import { BottomSheet } from "./BottomSheet";
@@ -21,13 +21,13 @@ export const Task3PrintRooms = ({ lang }) => {
   const [toast, setToast] = useState({ show: false, msg: "" });
 
   useEffect(() => {
-    setData(loadFromStorage(`task3-data-${getTodayKey()}-${room}`, {}));
+    setData(loadFromStorage(`task3-data-${getCurrentWeekKey()}-${room}`, {}));
   }, [room]);
 
   useEffect(() => {
     if (Object.keys(data).length > 0) {
-      saveToStorage(`task3-data-${getTodayKey()}-${room}`, data);
-      setToast({ show: true, msg: t(lang, "dataSavedToday"), type: "success" });
+      saveToStorage(`task3-data-${getCurrentWeekKey()}-${room}`, data);
+      setToast({ show: true, msg: t(lang, "dataSavedWeek"), type: "success" });
       setTimeout(() => setToast({ show: false, msg: "" }), 2000);
     }
   }, [data, room]);
@@ -83,7 +83,7 @@ export const Task3PrintRooms = ({ lang }) => {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: getTodayKey(), room, items: data }),
+        body: JSON.stringify({ week: getCurrentWeekKey(), room, items: data }),
       });
       vibrateDevice("success");
       setToast({ show: true, msg: "OK!", type: "success" });
@@ -108,10 +108,15 @@ export const Task3PrintRooms = ({ lang }) => {
         onClose={() => setToast({ ...toast, show: false })}
       />
       <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-6 space-y-5 border border-purple-100 dark:border-purple-800">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-          <span className="text-2xl">🖨️</span>
-          {t(lang, "officeSupplies")}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+            <span className="text-2xl">🖨️</span>
+            {t(lang, "officeSupplies")}
+          </h2>
+          <div className="text-xs px-3 py-1 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-full font-semibold">
+            {getCurrentWeekKey()}
+          </div>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           {PRINT_ROOMS.map((r) => (
             <button

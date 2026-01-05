@@ -30,22 +30,24 @@ export const Counter = ({ value, onChange, label, lang, onClose }) => {
           </p>
         </div>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-4">
         <button
           onClick={() => click(1)}
-          className="w-full h-20 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl shadow-lg font-bold text-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          className="w-full h-28 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 text-white rounded-3xl shadow-2xl font-black text-4xl flex items-center justify-center gap-3 active:scale-95 transition-all hover:shadow-emerald-500/50 border-4 border-emerald-400/30"
         >
-          ➕ {t(lang, "add")}
+          <span className="text-5xl">➕</span>
+          <span>{t(lang, "add")}</span>
         </button>
         <button
           onClick={() => click(-1)}
-          className="w-full h-16 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-2xl shadow-lg font-bold text-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          className="w-full h-24 bg-gradient-to-br from-rose-500 via-rose-600 to-pink-600 text-white rounded-3xl shadow-xl font-bold text-3xl flex items-center justify-center gap-3 active:scale-95 transition-all hover:shadow-rose-500/50 border-4 border-rose-400/30"
         >
-          ➖ {t(lang, "subtract")}
+          <span className="text-4xl">➖</span>
+          <span>{t(lang, "subtract")}</span>
         </button>
         <button
           onClick={onClose}
-          className="w-full h-16 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-2xl font-bold"
+          className="w-full h-16 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 text-gray-800 dark:text-gray-100 rounded-2xl font-bold text-lg shadow-md active:scale-95 transition-all"
         >
           {t(lang, "ok")}
         </button>
