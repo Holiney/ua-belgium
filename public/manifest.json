@@ -1,13 +1,13 @@
 {
-  "name": "Статистика роботи",
-  "short_name": "WorkStats",
-  "description": "Збір даних по персоналу, транспорту та канцелярії",
+  "name": "UA Belgium - Українці в Бельгії",
+  "short_name": "UA Belgium",
+  "description": "Гайди та послуги для українців у Бельгії",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#3b82f6",
   "orientation": "portrait",
-  "categories": ["business", "productivity"],
+  "categories": ["lifestyle", "reference", "social"],
   "lang": "uk",
   "scope": "/",
   "icons": [
@@ -26,24 +26,17 @@
   ],
   "shortcuts": [
     {
-      "name": "Персонал",
-      "short_name": "Персонал",
-      "description": "Облік персоналу та автомобілів",
-      "url": "/?task=task1",
+      "name": "База знань",
+      "short_name": "Гайди",
+      "description": "Корисні гайди для життя в Бельгії",
+      "url": "/?page=guides",
       "icons": [{"src": "/pwa-192.png", "sizes": "192x192"}]
     },
     {
-      "name": "Велосипеди",
-      "short_name": "Велосипеди", 
-      "description": "Облік велосипедів та транспорту",
-      "url": "/?task=task2",
-      "icons": [{"src": "/pwa-192.png", "sizes": "192x192"}]
-    },
-    {
-      "name": "Канцелярія",
-      "short_name": "Канцелярія",
-      "description": "Облік канцелярських товарів", 
-      "url": "/?task=task3",
+      "name": "Каталог послуг",
+      "short_name": "Послуги",
+      "description": "Українські спеціалісти в Бельгії",
+      "url": "/?page=services",
       "icons": [{"src": "/pwa-192.png", "sizes": "192x192"}]
     }
   ]

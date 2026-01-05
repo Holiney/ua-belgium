@@ -1,4 +1,4 @@
-const CACHE_NAME = 'work-stats-v4.1.0';
+const CACHE_NAME = 'ua-belgium-v1.0.0';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -72,8 +72,8 @@ self.addEventListener('push', (event) => {
     icon: '/pwa-192.png',
     badge: '/pwa-192.png'
   };
-  
+
   event.waitUntil(
-    self.registration.showNotification('Статистика роботи', options)
+    self.registration.showNotification('UA Belgium', options)
   );
 });

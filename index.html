@@ -2,29 +2,38 @@
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    
+
     <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
     <link rel="icon" type="image/x-icon" href="/public/favicon.ico" />
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>Статистика роботи</title>
-    
-    <meta name="description" content="Збір даних по персоналу, транспорту та канцелярії" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>UA Belgium - Українці в Бельгії</title>
+
+    <meta name="description" content="Гайди та послуги для українців у Бельгії. Корисна інформація про життя, документи, роботу та перевірені спеціалісти." />
+    <meta name="keywords" content="українці бельгія, ukraine belgium, гайд бельгія, послуги українською, ukrainian services belgium" />
+    <meta name="author" content="UA Belgium" />
+
     <meta name="theme-color" content="#3b82f6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="WorkStats" />
+    <meta name="apple-mobile-web-app-title" content="UA Belgium" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="msapplication-TileColor" content="#3b82f6" />
     <meta name="msapplication-tap-highlight" content="no" />
-    
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="UA Belgium - Українці в Бельгії" />
+    <meta property="og:description" content="Гайди та послуги для українців у Бельгії" />
+    <meta property="og:locale" content="uk_UA" />
+
     <link rel="icon" type="image/png" sizes="96x96" href="/public/favicon-96x96.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/public/pwa-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/public/pwa-512.png" />
     <link rel="apple-touch-icon" href="/public/apple-touch-icon.png" />
-    
+
     <link rel="manifest" href="/public/manifest.json" />
-    
+
     <style>
       * {
         -webkit-touch-callout: none;
@@ -35,21 +44,21 @@
         user-select: none;
         -webkit-tap-highlight-color: transparent;
       }
-      
-      input, textarea {
+
+      input, textarea, select {
         -webkit-user-select: text;
         -moz-user-select: text;
         -ms-user-select: text;
         user-select: text;
       }
-      
+
       .pwa-splash {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #fbbf24 100%);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -58,18 +67,18 @@
         z-index: 9999;
         transition: opacity 0.5s ease-out;
       }
-      
+
       .pwa-splash.hidden {
         opacity: 0;
         pointer-events: none;
       }
-      
+
       .splash-icon {
-        font-size: 4rem;
-        margin-bottom: 1rem;
+        font-size: 5rem;
+        margin-bottom: 1.5rem;
         animation: pulse 2s infinite;
       }
-      
+
       @keyframes pulse {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
@@ -78,14 +87,14 @@
   </head>
   <body>
     <div class="pwa-splash" id="splash">
-      <div class="splash-icon">📊</div>
-      <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">Статистика роботи</div>
-      <div style="font-size: 1rem; opacity: 0.8;">Завантаження...</div>
+      <div class="splash-icon">🇺🇦</div>
+      <div style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem;">UA Belgium</div>
+      <div style="font-size: 1rem; opacity: 0.9;">Ваш помічник у Бельгії</div>
     </div>
-    
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    
+
     <script>
       // Service Worker Registration
       if ('serviceWorker' in navigator) {
@@ -99,7 +108,7 @@
             });
         });
       }
-      
+
       // Hide splash screen
       window.addEventListener('load', () => {
         setTimeout(() => {
@@ -108,36 +117,29 @@
             splash.classList.add('hidden');
             setTimeout(() => splash.remove(), 500);
           }
-        }, 1000);
+        }, 800);
       });
-      
+
       // PWA Install Prompt
       let deferredPrompt;
-      
+
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
         window.dispatchEvent(new CustomEvent('pwa-install-available'));
       });
-      
+
       window.addEventListener('appinstalled', () => {
         console.log('PWA installed');
         window.dispatchEvent(new CustomEvent('pwa-installed'));
       });
-      
+
       window.installPWA = () => {
         if (deferredPrompt) {
           deferredPrompt.prompt();
           deferredPrompt.userChoice.then((choiceResult) => {
             deferredPrompt = null;
           });
-        }
-      };
-      
-      // Vibration helper
-      window.vibrate = (pattern) => {
-        if ('vibrate' in navigator) {
-          navigator.vibrate(pattern);
         }
       };
     </script>

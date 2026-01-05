@@ -1,7 +1,7 @@
 {
-  "name": "work-statistics-app",
+  "name": "ua-belgium-app",
   "private": true,
-  "version": "4.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
