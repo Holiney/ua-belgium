@@ -34,9 +34,9 @@ export function TransportPage() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <SectionTitle>🚐 Транспорт UA ↔ BE</SectionTitle>
+        <SectionTitle>🚐 Перевезення UA ↔ BE</SectionTitle>
         <p className="text-gray-600 dark:text-gray-400 text-sm">
-          Перевезення пасажирів та посилок між країнами
+          Пасажири та посилки між Україною та Бельгією
         </p>
       </div>
 
