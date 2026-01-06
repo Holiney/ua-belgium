@@ -7,6 +7,7 @@ import { MarketplacePage } from './components/MarketplacePage';
 import { VehiclesPage } from './components/VehiclesPage';
 import { TransportPage } from './components/TransportPage';
 import { NewsPage, NewsDetailPage } from './components/NewsPage';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { loadFromStorage, saveToStorage } from './utils/storage';
 
 export default function App() {
@@ -110,6 +111,8 @@ export default function App() {
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      <PWAInstallBanner />
 
       <Header
         title={headerConfig.title}
