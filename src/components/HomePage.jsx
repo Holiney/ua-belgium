@@ -1,9 +1,10 @@
 import { Card, SectionTitle } from './Layout';
 import { guideCategories, serviceCategories } from '../data/categories';
 import { mockNews } from '../data/news';
-import { ChevronRight, BookOpen, Briefcase, Heart, Info, ShoppingBag, Car, Truck, Pin } from 'lucide-react';
+import { upcomingTrips } from '../data/services';
+import { ChevronRight, BookOpen, Briefcase, Heart, Info, ShoppingBag, UtensilsCrossed, Building2, Pin, MessageCircle, Users, Package } from 'lucide-react';
 
-const APP_VERSION = 'v1.15';
+const APP_VERSION = 'v2.0';
 
 export function HomePage({ onNavigate }) {
   // Get latest 2 pinned or recent news
@@ -32,17 +33,62 @@ export function HomePage({ onNavigate }) {
           <div>
             <h1 className="text-2xl font-bold mb-2">Ласкаво просимо!</h1>
             <p className="text-blue-100 text-sm leading-relaxed">
-              Ваш помічник для життя в Бельгії. Гайди, послуги, товари та перевезення.
+              Ваш помічник для життя в Бельгії. Гайди, послуги, оголошення та перевезення.
             </p>
           </div>
         </div>
       </div>
 
+      {/* Upcoming Trips Banner */}
+      <section>
+        <Card className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              🚐 Найближчі поїздки в Україну
+            </h3>
+            <button
+              onClick={() => onNavigate('services', { categoryFilter: 'transport' })}
+              className="text-sm text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"
+            >
+              Всі <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {upcomingTrips.map(trip => (
+              <a
+                key={trip.id}
+                href={`https://t.me/${trip.telegram.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{trip.day}</div>
+                    <div className="font-bold text-gray-900 dark:text-white">{trip.date.split(' ')[0]}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white text-sm">{trip.route}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                      {trip.driver}
+                      {trip.type === 'passengers' && <><Users className="w-3 h-3" /> {trip.seats} місць</>}
+                      {trip.type === 'parcels' && <><Package className="w-3 h-3" /> посилки</>}
+                      {trip.type === 'combined' && <><Users className="w-3 h-3" /> + <Package className="w-3 h-3" /></>}
+                    </div>
+                  </div>
+                </div>
+                <MessageCircle className="w-5 h-5 text-blue-500" />
+              </a>
+            ))}
+          </div>
+        </Card>
+      </section>
+
       {/* Latest News */}
       {latestNews.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <SectionTitle className="mb-0">📰 Останні новини</SectionTitle>
+            <SectionTitle className="mb-0">Останні новини</SectionTitle>
             <button
               onClick={() => onNavigate('news')}
               className="text-sm text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"
@@ -78,35 +124,32 @@ export function HomePage({ onNavigate }) {
         </section>
       )}
 
-      {/* Quick Links to New Modules */}
+      {/* Quick Access - Main Sections */}
       <section>
-        <SectionTitle>Швидкі посилання</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
+        <SectionTitle>Дошка оголошень</SectionTitle>
+        <div className="grid grid-cols-3 gap-3">
           <Card
-            className="p-4 text-center bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800"
-            onClick={() => onNavigate('marketplace')}
+            className="p-4 text-center"
+            onClick={() => onNavigate('products')}
           >
-            <ShoppingBag className="w-10 h-10 mx-auto mb-2 text-purple-600 dark:text-purple-400" />
-            <div className="font-semibold text-gray-900 dark:text-white">Товари</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Купівля-продаж</div>
+            <ShoppingBag className="w-8 h-8 mx-auto mb-2 text-purple-500" />
+            <div className="font-medium text-gray-900 dark:text-white text-sm">Товари</div>
           </Card>
 
           <Card
-            className="p-4 text-center bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800"
-            onClick={() => onNavigate('vehicles')}
+            className="p-4 text-center"
+            onClick={() => onNavigate('food')}
           >
-            <Car className="w-10 h-10 mx-auto mb-2 text-green-600 dark:text-green-400" />
-            <div className="font-semibold text-gray-900 dark:text-white">Автомобілі</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Авто та мото</div>
+            <UtensilsCrossed className="w-8 h-8 mx-auto mb-2 text-orange-500" />
+            <div className="font-medium text-gray-900 dark:text-white text-sm">Їжа</div>
           </Card>
 
           <Card
-            className="p-4 text-center bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-orange-200 dark:border-orange-800 col-span-2"
-            onClick={() => onNavigate('transport')}
+            className="p-4 text-center"
+            onClick={() => onNavigate('rental')}
           >
-            <Truck className="w-10 h-10 mx-auto mb-2 text-orange-600 dark:text-orange-400" />
-            <div className="font-semibold text-gray-900 dark:text-white">Перевезення UA ↔ BE</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Пасажири та посилки</div>
+            <Building2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
+            <div className="font-medium text-gray-900 dark:text-white text-sm">Оренда</div>
           </Card>
         </div>
       </section>
@@ -120,7 +163,7 @@ export function HomePage({ onNavigate }) {
         </Card>
         <Card className="p-4 text-center" onClick={() => onNavigate('services')}>
           <Briefcase className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">18+</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">35+</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">Спеціалістів</div>
         </Card>
       </div>
@@ -128,7 +171,7 @@ export function HomePage({ onNavigate }) {
       {/* Guide Categories Preview */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <SectionTitle className="mb-0">Категорії гайдів</SectionTitle>
+          <SectionTitle className="mb-0">База знань</SectionTitle>
           <button
             onClick={() => onNavigate('guides')}
             className="text-sm text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"
@@ -155,7 +198,7 @@ export function HomePage({ onNavigate }) {
       {/* Services Preview */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <SectionTitle className="mb-0">Категорії послуг</SectionTitle>
+          <SectionTitle className="mb-0">Послуги</SectionTitle>
           <button
             onClick={() => onNavigate('services')}
             className="text-sm text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"
@@ -164,17 +207,23 @@ export function HomePage({ onNavigate }) {
           </button>
         </div>
         <div className="space-y-2">
-          {serviceCategories.slice(0, 3).map((category) => (
+          {serviceCategories.slice(0, 4).map((category) => (
             <Card
               key={category.id}
-              className="p-4 flex items-center gap-4"
+              className={`p-4 flex items-center gap-4 ${category.featured ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
               onClick={() => onNavigate('services', { categoryFilter: category.id })}
             >
               <div className="text-2xl">{category.icon}</div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900 dark:text-white">
+                <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   {category.name}
+                  {category.featured && (
+                    <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded">
+                      Hot
+                    </span>
+                  )}
                 </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{category.description}</div>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400" />
             </Card>

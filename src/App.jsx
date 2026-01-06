@@ -3,9 +3,9 @@ import { Header, BottomNav, PageContainer } from './components/Layout';
 import { HomePage } from './components/HomePage';
 import { GuidesPage, CategoryPage, ArticlePage } from './components/GuidesPage';
 import { ServicesPage, ServiceProfilePage } from './components/ServicesPage';
-import { MarketplacePage } from './components/MarketplacePage';
-import { VehiclesPage } from './components/VehiclesPage';
-import { TransportPage } from './components/TransportPage';
+import { ProductsPage } from './components/ProductsPage';
+import { FoodPage } from './components/FoodPage';
+import { RentalPage } from './components/RentalPage';
 import { NewsPage, NewsDetailPage } from './components/NewsPage';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { loadFromStorage, saveToStorage } from './utils/storage';
@@ -70,23 +70,23 @@ export default function App() {
       case 'home':
         return { title: 'UA Belgium', showBack: false };
       case 'guides':
-        return { title: 'База знань', showBack: false };
+        return { title: 'База знань', showBack: true };
       case 'category':
         return { title: 'Категорія', showBack: true };
       case 'article':
         return { title: 'Стаття', showBack: true };
       case 'services':
-        return { title: 'Каталог послуг', showBack: false };
+        return { title: 'Послуги', showBack: false };
       case 'service':
         return { title: 'Спеціаліст', showBack: true };
-      case 'marketplace':
-        return { title: 'Маркетплейс', showBack: false };
-      case 'vehicles':
-        return { title: 'Автомобілі', showBack: false };
-      case 'transport':
-        return { title: 'Перевезення UA ↔ BE', showBack: false };
+      case 'products':
+        return { title: 'Товари', showBack: false };
+      case 'food':
+        return { title: 'Їжа та напої', showBack: false };
+      case 'rental':
+        return { title: 'Оренда житла', showBack: false };
       case 'news':
-        return { title: 'Новини', showBack: false };
+        return { title: 'Новини', showBack: true };
       case 'news-detail':
         return { title: 'Новина', showBack: true };
       default:
@@ -158,16 +158,16 @@ export default function App() {
           />
         )}
 
-        {page === 'marketplace' && (
-          <MarketplacePage />
+        {page === 'products' && (
+          <ProductsPage />
         )}
 
-        {page === 'vehicles' && (
-          <VehiclesPage />
+        {page === 'food' && (
+          <FoodPage />
         )}
 
-        {page === 'transport' && (
-          <TransportPage />
+        {page === 'rental' && (
+          <RentalPage />
         )}
 
         {page === 'news' && (
