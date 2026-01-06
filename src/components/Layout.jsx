@@ -1,4 +1,4 @@
-import { Home, BookOpen, Briefcase, ShoppingBag, Car, Truck, Newspaper, ArrowLeft } from 'lucide-react';
+import { Home, ShoppingBag, UtensilsCrossed, Building2, Briefcase, ArrowLeft } from 'lucide-react';
 
 export function Header({ title, showBack, onBack }) {
   return (
@@ -30,11 +30,10 @@ export function Header({ title, showBack, onBack }) {
 export function BottomNav({ currentPage, onNavigate }) {
   const navItems = [
     { id: 'home', label: 'Головна', icon: Home },
-    { id: 'guides', label: 'Гайди', icon: BookOpen },
+    { id: 'products', label: 'Товари', icon: ShoppingBag },
+    { id: 'food', label: 'Їжа', icon: UtensilsCrossed },
+    { id: 'rental', label: 'Оренда', icon: Building2 },
     { id: 'services', label: 'Послуги', icon: Briefcase },
-    { id: 'marketplace', label: 'Товари', icon: ShoppingBag },
-    { id: 'vehicles', label: 'Авто', icon: Car },
-    { id: 'transport', label: 'Перевезення', icon: Truck },
   ];
 
   return (
@@ -42,8 +41,8 @@ export function BottomNav({ currentPage, onNavigate }) {
       <div className="max-w-2xl mx-auto flex justify-around">
         {navItems.map(({ id, label, icon: Icon }) => {
           const isActive = currentPage === id ||
-            (id === 'guides' && (currentPage === 'category' || currentPage === 'article')) ||
-            (id === 'services' && (currentPage === 'service'));
+            (id === 'home' && (currentPage === 'guides' || currentPage === 'category' || currentPage === 'article' || currentPage === 'news' || currentPage === 'news-detail')) ||
+            (id === 'services' && (currentPage === 'service' || currentPage === 'transport'));
 
           return (
             <button
