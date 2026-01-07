@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export function ProfilePage({ onNavigate }) {
-  const { user, profile, isAuthenticated, loading, signOut, updateProfile } = useAuth();
+  const { user, profile, isAuthenticated, loading, signOut, updateProfile, isBackendReady } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [myListings, setMyListings] = useState({ products: [], food: [], rentals: [] });
   const [loadingListings, setLoadingListings] = useState(false);
@@ -111,12 +111,20 @@ export function ProfilePage({ onNavigate }) {
           <p className="text-gray-500 dark:text-gray-400 mb-6">
             Увійдіть, щоб додавати оголошення, зберігати обране та керувати своїм профілем
           </p>
-          <button
-            onClick={() => setShowLogin(true)}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
-          >
-            Увійти через Telegram
-          </button>
+          {isBackendReady ? (
+            <button
+              onClick={() => setShowLogin(true)}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+            >
+              Увійти через Telegram
+            </button>
+          ) : (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
+              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                Авторизація буде доступна після налаштування бекенду
+              </p>
+            </div>
+          )}
         </Card>
 
         <Card className="p-4">

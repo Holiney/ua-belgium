@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { supabase, getProfile } from '../lib/supabase';
+import { supabase, getProfile, isBackendReady } from '../lib/supabase';
 
 const AuthContext = createContext({});
 
@@ -9,6 +9,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If Supabase is not configured, skip auth initialization
+    if (!isBackendReady || !supabase) {
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -48,6 +54,10 @@ export function AuthProvider({ children }) {
   };
 
   const signInWithTelegram = async (telegramData) => {
+    if (!isBackendReady || !supabase) {
+      return { data: null, error: new Error('Backend not configured') };
+    }
+
     try {
       // Telegram Login Widget returns data like:
       // { id, first_name, last_name, username, photo_url, auth_date, hash }
@@ -90,6 +100,12 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    if (!isBackendReady || !supabase) {
+      setUser(null);
+      setProfile(null);
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.signOut();
     if (!error) {
       setUser(null);
@@ -100,6 +116,7 @@ export function AuthProvider({ children }) {
 
   const updateProfile = async (updates) => {
     if (!user) return { error: new Error('Not authenticated') };
+    if (!isBackendReady || !supabase) return { error: new Error('Backend not configured') };
 
     const { data, error } = await supabase
       .from('profiles')
@@ -119,6 +136,7 @@ export function AuthProvider({ children }) {
     profile,
     loading,
     isAuthenticated: !!user,
+    isBackendReady,
     signInWithTelegram,
     signOut,
     updateProfile,
