@@ -1,6 +1,6 @@
-import { Home, ShoppingBag, UtensilsCrossed, Building2, Briefcase, ArrowLeft } from 'lucide-react';
+import { Home, ShoppingBag, UtensilsCrossed, Building2, Briefcase, ArrowLeft, Heart, Sun, Moon } from 'lucide-react';
 
-export function Header({ title, showBack, onBack }) {
+export function Header({ title, showBack, onBack, onNavigate, theme, onToggleTheme }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-b border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
@@ -21,6 +21,35 @@ export function Header({ title, showBack, onBack }) {
               {title || 'UA Belgium'}
             </h1>
           </div>
+        </div>
+
+        {/* Header actions */}
+        <div className="flex items-center gap-1">
+          {/* Favorites button */}
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('favorites')}
+              className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Обране"
+            >
+              <Heart className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            </button>
+          )}
+
+          {/* Theme toggle */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label={theme === 'dark' ? 'Світла тема' : 'Темна тема'}
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5 text-yellow-500" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+          )}
         </div>
       </div>
     </header>

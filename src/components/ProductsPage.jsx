@@ -1,10 +1,17 @@
 import { useState } from 'react';
-import { Plus, X, Heart, MapPin, Phone, MessageCircle, Gift, Search } from 'lucide-react';
+import { Plus, X, Heart, MapPin, Phone, MessageCircle, Gift, Search, Tag } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 
+// Listing types
+const listingTypes = [
+  { id: 'all', name: 'Всі' },
+  { id: 'offer', name: 'Пропоную', icon: '📦', color: 'blue' },
+  { id: 'looking', name: 'Шукаю', icon: '🔍', color: 'purple' },
+];
+
 // Categories for products
-const categories = [
+export const categories = [
   { id: 'all', name: 'Всі', icon: '📦' },
   { id: 'electronics', name: 'Електроніка', icon: '📱' },
   { id: 'furniture', name: 'Меблі', icon: '🛋️' },
@@ -17,7 +24,7 @@ const categories = [
   { id: 'other', name: 'Інше', icon: '📦' },
 ];
 
-const cities = [
+export const cities = [
   { id: 'all', name: 'Вся Бельгія' },
   { id: 'brussels', name: 'Брюссель' },
   { id: 'antwerp', name: 'Антверпен' },
@@ -34,9 +41,10 @@ const conditions = [
 ];
 
 // Mock data for products
-const mockProducts = [
+export const mockProducts = [
   {
     id: '1',
+    listingType: 'offer',
     title: 'iPhone 13 Pro 256GB',
     category: 'electronics',
     price: 650,
@@ -49,18 +57,20 @@ const mockProducts = [
   },
   {
     id: '2',
-    title: 'Дитяча коляска Bugaboo Fox',
+    listingType: 'looking',
+    title: 'Шукаю дитячу коляску',
     category: 'kids',
-    price: 350,
+    price: 200,
     condition: 'used',
     city: 'antwerp',
-    description: 'Коляска в хорошому стані, є дощовик та москітна сітка',
-    contact: { phone: '+32 485 234 567' },
+    description: 'Шукаю коляску в хорошому стані, бажано Bugaboo або Stokke. Бюджет до €200',
+    contact: { telegram: '@looking_stroller' },
     isFree: false,
-    createdAt: new Date('2026-01-04'),
+    createdAt: new Date('2026-01-05'),
   },
   {
     id: '3',
+    listingType: 'offer',
     title: 'Диван IKEA Kivik',
     category: 'furniture',
     price: 200,
@@ -73,6 +83,7 @@ const mockProducts = [
   },
   {
     id: '4',
+    listingType: 'offer',
     title: 'Дитяче ліжечко з матрацом',
     category: 'kids',
     price: 0,
@@ -85,18 +96,20 @@ const mockProducts = [
   },
   {
     id: '5',
-    title: 'Пральна машина Samsung',
+    listingType: 'looking',
+    title: 'Шукаю пральну машину',
     category: 'appliances',
-    price: 180,
+    price: 150,
     condition: 'used',
     city: 'liege',
-    description: '7 кг, працює добре, можу допомогти з доставкою',
+    description: 'Потрібна пральна машина 7+ кг. Можу забрати сам.',
     contact: { phone: '+32 499 456 789' },
     isFree: false,
-    createdAt: new Date('2026-01-02'),
+    createdAt: new Date('2026-01-04'),
   },
   {
     id: '6',
+    listingType: 'offer',
     title: 'Велосипед Trek FX 3',
     category: 'transport',
     price: 450,
@@ -109,6 +122,7 @@ const mockProducts = [
   },
   {
     id: '7',
+    listingType: 'offer',
     title: 'PlayStation 5 + 2 контролери',
     category: 'electronics',
     price: 400,
@@ -121,6 +135,7 @@ const mockProducts = [
   },
   {
     id: '8',
+    listingType: 'offer',
     title: 'Volkswagen Golf 7 2018',
     category: 'transport',
     price: 14500,
@@ -133,18 +148,20 @@ const mockProducts = [
   },
   {
     id: '9',
-    title: 'Набір інструментів Bosch',
-    category: 'tools',
-    price: 120,
-    condition: 'new',
+    listingType: 'looking',
+    title: 'Шукаю велосипед для дитини',
+    category: 'transport',
+    price: 100,
+    condition: 'used',
     city: 'ghent',
-    description: 'Новий, запакований, 108 предметів',
-    contact: { phone: '+32 489 789 012' },
+    description: 'Потрібен дитячий велосипед на вік 5-7 років',
+    contact: { telegram: '@looking_bike' },
     isFree: false,
-    createdAt: new Date('2026-01-02'),
+    createdAt: new Date('2026-01-04'),
   },
   {
     id: '10',
+    listingType: 'offer',
     title: 'Жіноча куртка Zara, M',
     category: 'clothing',
     price: 45,
@@ -160,6 +177,7 @@ const mockProducts = [
 // Add Product Form Component
 function AddProductForm({ onClose, onAdd }) {
   const [formData, setFormData] = useState({
+    listingType: 'offer',
     title: '',
     category: 'electronics',
     price: '',
@@ -177,6 +195,7 @@ function AddProductForm({ onClose, onAdd }) {
 
     const newProduct = {
       id: Date.now().toString(),
+      listingType: formData.listingType,
       title: formData.title,
       category: formData.category,
       price: formData.isFree ? 0 : (parseInt(formData.price) || 0),
@@ -208,14 +227,45 @@ function AddProductForm({ onClose, onAdd }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Listing Type Toggle */}
           <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Назва *</label>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Тип оголошення</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, listingType: 'offer' })}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
+                  formData.listingType === 'offer'
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
+                }`}
+              >
+                <span>📦</span> Пропоную
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, listingType: 'looking' })}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
+                  formData.listingType === 'looking'
+                    ? 'bg-purple-500 text-white border-purple-500'
+                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
+                }`}
+              >
+                <span>🔍</span> Шукаю
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">
+              {formData.listingType === 'offer' ? 'Що пропонуєте?' : 'Що шукаєте?'} *
+            </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Наприклад: iPhone 13 Pro"
+              placeholder={formData.listingType === 'offer' ? "Наприклад: iPhone 13 Pro" : "Наприклад: Дитяча коляска"}
               required
             />
           </div>
@@ -233,21 +283,25 @@ function AddProductForm({ onClose, onAdd }) {
             </select>
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.isFree}
-                onChange={(e) => setFormData({ ...formData, isFree: e.target.checked })}
-                className="w-5 h-5 rounded"
-              />
-              <span className="text-sm font-medium dark:text-gray-200">🎁 Віддам безкоштовно</span>
-            </label>
-          </div>
+          {formData.listingType === 'offer' && (
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isFree}
+                  onChange={(e) => setFormData({ ...formData, isFree: e.target.checked })}
+                  className="w-5 h-5 rounded"
+                />
+                <span className="text-sm font-medium dark:text-gray-200">🎁 Віддам безкоштовно</span>
+              </label>
+            </div>
+          )}
 
           {!formData.isFree && (
             <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ціна (€)</label>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">
+                {formData.listingType === 'offer' ? 'Ціна (€)' : 'Бюджет (€)'}
+              </label>
               <input
                 type="number"
                 value={formData.price}
@@ -258,25 +312,27 @@ function AddProductForm({ onClose, onAdd }) {
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Стан</label>
-            <div className="flex gap-2">
-              {conditions.filter(c => c.id !== 'all').map(cond => (
-                <button
-                  key={cond.id}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, condition: cond.id })}
-                  className={`flex-1 py-2 px-4 rounded-xl border transition-colors ${
-                    formData.condition === cond.id
-                      ? 'bg-blue-500 text-white border-blue-500'
-                      : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
-                  }`}
-                >
-                  {cond.name}
-                </button>
-              ))}
+          {formData.listingType === 'offer' && (
+            <div>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Стан</label>
+              <div className="flex gap-2">
+                {conditions.filter(c => c.id !== 'all').map(cond => (
+                  <button
+                    key={cond.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, condition: cond.id })}
+                    className={`flex-1 py-2 px-4 rounded-xl border transition-colors ${
+                      formData.condition === cond.id
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
+                    }`}
+                  >
+                    {cond.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-2 dark:text-gray-200">Місто</label>
@@ -298,7 +354,7 @@ function AddProductForm({ onClose, onAdd }) {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               rows={3}
-              placeholder="Додайте деталі про товар..."
+              placeholder={formData.listingType === 'offer' ? "Додайте деталі про товар..." : "Опишіть що саме шукаєте..."}
             />
           </div>
 
@@ -341,14 +397,21 @@ function ProductCard({ product, isFavorite, onToggleFavorite }) {
   const [showContacts, setShowContacts] = useState(false);
   const category = categories.find(c => c.id === product.category);
   const city = cities.find(c => c.id === product.city);
+  const isLooking = product.listingType === 'looking';
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={`overflow-hidden ${isLooking ? 'border-l-4 border-l-purple-500' : ''}`}>
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{category?.icon}</span>
+              {isLooking ? (
+                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full flex items-center gap-1">
+                  🔍 Шукаю
+                </span>
+              ) : (
+                <span className="text-lg">{category?.icon}</span>
+              )}
               <span className="text-xs text-gray-500 dark:text-gray-400">{category?.name}</span>
             </div>
             <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">{product.title}</h3>
@@ -373,13 +436,17 @@ function ProductCard({ product, isFavorite, onToggleFavorite }) {
               Безкоштовно
             </span>
           ) : product.price > 0 ? (
-            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">€{product.price}</span>
+            <span className={`text-lg font-bold ${isLooking ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
+              {isLooking ? 'до ' : ''}€{product.price}
+            </span>
           ) : (
             <span className="text-sm text-gray-500 dark:text-gray-400">Договірна</span>
           )}
-          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
-            {product.condition === 'new' ? 'Нове' : 'Б/У'}
-          </span>
+          {!isLooking && product.condition && (
+            <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
+              {product.condition === 'new' ? 'Нове' : 'Б/У'}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -395,7 +462,11 @@ function ProductCard({ product, isFavorite, onToggleFavorite }) {
 
         <button
           onClick={() => setShowContacts(!showContacts)}
-          className="w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+          className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
+            isLooking
+              ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+              : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+          }`}
         >
           {showContacts ? 'Сховати контакти' : 'Показати контакти'}
         </button>
@@ -432,6 +503,7 @@ function ProductCard({ product, isFavorite, onToggleFavorite }) {
 // Main Products Page
 export function ProductsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedListingType, setSelectedListingType] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [selectedCondition, setSelectedCondition] = useState('all');
@@ -445,6 +517,7 @@ export function ProductsPage() {
   );
 
   const filteredProducts = allProducts.filter(product => {
+    if (selectedListingType !== 'all' && product.listingType !== selectedListingType) return false;
     if (selectedCategory !== 'all' && product.category !== selectedCategory) return false;
     if (selectedCity !== 'all' && product.city !== selectedCity) return false;
     if (selectedCondition !== 'all' && product.condition !== selectedCondition) return false;
@@ -481,6 +554,26 @@ export function ProductsPage() {
         />
       </div>
 
+      {/* Listing Type Filter */}
+      <div className="flex gap-2">
+        {listingTypes.map(type => (
+          <button
+            key={type.id}
+            onClick={() => setSelectedListingType(type.id)}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+              selectedListingType === type.id
+                ? type.id === 'looking'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-blue-500 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            {type.icon && <span>{type.icon}</span>}
+            {type.name}
+          </button>
+        ))}
+      </div>
+
       {/* Categories */}
       <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
         <div className="flex gap-2 pb-2">
@@ -513,27 +606,31 @@ export function ProductsPage() {
           ))}
         </select>
 
-        <select
-          value={selectedCondition}
-          onChange={(e) => setSelectedCondition(e.target.value)}
-          className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm"
-        >
-          {conditions.map(cond => (
-            <option key={cond.id} value={cond.id}>{cond.name}</option>
-          ))}
-        </select>
+        {selectedListingType !== 'looking' && (
+          <>
+            <select
+              value={selectedCondition}
+              onChange={(e) => setSelectedCondition(e.target.value)}
+              className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm"
+            >
+              {conditions.map(cond => (
+                <option key={cond.id} value={cond.id}>{cond.name}</option>
+              ))}
+            </select>
 
-        <button
-          onClick={() => setShowFreeOnly(!showFreeOnly)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm transition-colors ${
-            showFreeOnly
-              ? 'bg-green-500 text-white'
-              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <Gift className="w-4 h-4" />
-          Безкоштовно
-        </button>
+            <button
+              onClick={() => setShowFreeOnly(!showFreeOnly)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm transition-colors ${
+                showFreeOnly
+                  ? 'bg-green-500 text-white'
+                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Gift className="w-4 h-4" />
+              Безкоштовно
+            </button>
+          </>
+        )}
       </div>
 
       {/* Results count */}

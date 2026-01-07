@@ -2,9 +2,17 @@ import { Card, SectionTitle } from './Layout';
 import { guideCategories, serviceCategories } from '../data/categories';
 import { mockNews } from '../data/news';
 import { upcomingTrips } from '../data/services';
-import { ChevronRight, BookOpen, Briefcase, Heart, Info, ShoppingBag, UtensilsCrossed, Building2, Pin, MessageCircle, Users, Package } from 'lucide-react';
+import { ChevronRight, BookOpen, Briefcase, Heart, Info, ShoppingBag, UtensilsCrossed, Building2, Pin, MessageCircle, Users, Package, Phone, AlertTriangle } from 'lucide-react';
 
-const APP_VERSION = 'v2.0';
+// Emergency contacts data
+const emergencyContacts = [
+  { id: '112', name: 'Екстрена допомога', number: '112', description: 'Поліція, пожежна, швидка', icon: '🆘', color: 'red' },
+  { id: 'embassy', name: 'Посольство України', number: '+32 2 379 21 00', description: 'Консульський відділ', icon: '🇺🇦', color: 'blue' },
+  { id: 'police', name: 'Поліція', number: '101', description: 'Неекстрений виклик', icon: '👮', color: 'blue' },
+  { id: 'medical', name: 'Медична допомога', number: '1733', description: 'Лікар на черговості', icon: '🏥', color: 'green' },
+];
+
+const APP_VERSION = 'v2.1';
 
 export function HomePage({ onNavigate }) {
   // Get latest 2 pinned or recent news
@@ -248,6 +256,47 @@ export function HomePage({ onNavigate }) {
           </div>
         </div>
       </Card>
+
+      {/* Emergency Contacts */}
+      <section>
+        <SectionTitle>Екстрені контакти</SectionTitle>
+        <div className="grid grid-cols-2 gap-3">
+          {emergencyContacts.map(contact => (
+            <a
+              key={contact.id}
+              href={`tel:${contact.number.replace(/\s/g, '')}`}
+              className={`p-4 rounded-2xl border transition-all hover:shadow-md active:scale-98 ${
+                contact.color === 'red'
+                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  : contact.color === 'green'
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                  : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="text-2xl">{contact.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                    {contact.name}
+                  </div>
+                  <div className={`text-lg font-bold ${
+                    contact.color === 'red'
+                      ? 'text-red-600 dark:text-red-400'
+                      : contact.color === 'green'
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-blue-600 dark:text-blue-400'
+                  }`}>
+                    {contact.number}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {contact.description}
+                  </div>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
 
       {/* Support Ukraine */}
       <Card className="p-5 bg-gradient-to-br from-yellow-50 to-blue-50 dark:from-yellow-900/20 dark:to-blue-900/20 border-yellow-200 dark:border-yellow-800">
