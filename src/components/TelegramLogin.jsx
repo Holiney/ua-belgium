@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageCircle } from 'lucide-react';
 
@@ -8,23 +8,35 @@ export function TelegramLoginButton({ onSuccess, onError }) {
   const containerRef = useRef(null);
   const { signInWithTelegram } = useAuth();
 
+  const handleTelegramAuth = useCallback(async (telegramUser) => {
+    console.log('Telegram auth callback received:', telegramUser);
+    try {
+      const { data, error } = await signInWithTelegram(telegramUser);
+      if (error) {
+        console.error('Sign in error:', error);
+        onError?.(error);
+      } else {
+        console.log('Sign in success:', data);
+        onSuccess?.(data);
+      }
+    } catch (err) {
+      console.error('Sign in exception:', err);
+      onError?.(err);
+    }
+  }, [signInWithTelegram, onSuccess, onError]);
+
   useEffect(() => {
     // Create global callback for Telegram Widget
-    window.onTelegramAuth = async (telegramUser) => {
-      try {
-        const { data, error } = await signInWithTelegram(telegramUser);
-        if (error) {
-          onError?.(error);
-        } else {
-          onSuccess?.(data);
-        }
-      } catch (err) {
-        onError?.(err);
-      }
+    window.TelegramLoginWidget = {
+      dataOnauth: handleTelegramAuth
     };
+    window.onTelegramAuth = handleTelegramAuth;
 
     // Load Telegram Widget script
     if (containerRef.current && TELEGRAM_BOT_USERNAME) {
+      // Clear previous content
+      containerRef.current.innerHTML = '';
+
       const script = document.createElement('script');
       script.src = 'https://telegram.org/js/telegram-widget.js?22';
       script.setAttribute('data-telegram-login', TELEGRAM_BOT_USERNAME);
@@ -39,8 +51,9 @@ export function TelegramLoginButton({ onSuccess, onError }) {
 
     return () => {
       delete window.onTelegramAuth;
+      delete window.TelegramLoginWidget;
     };
-  }, [signInWithTelegram, onSuccess, onError]);
+  }, [handleTelegramAuth]);
 
   if (!TELEGRAM_BOT_USERNAME) {
     return (
@@ -57,36 +70,6 @@ export function TelegramLoginButton({ onSuccess, onError }) {
   );
 }
 
-// Alternative styled button that redirects to Telegram
-export function TelegramLoginButtonStyled({ className = '' }) {
-  const handleClick = () => {
-    if (!TELEGRAM_BOT_USERNAME) {
-      alert('Telegram бот не налаштований');
-      return;
-    }
-    // Open Telegram login in a popup
-    const width = 550;
-    const height = 470;
-    const left = (window.innerWidth - width) / 2;
-    const top = (window.innerHeight - height) / 2;
-
-    window.open(
-      `https://oauth.telegram.org/auth?bot_id=${TELEGRAM_BOT_USERNAME}&origin=${encodeURIComponent(window.location.origin)}&request_access=write`,
-      'telegram_login',
-      `width=${width},height=${height},left=${left},top=${top}`
-    );
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      className={`flex items-center justify-center gap-3 w-full py-3 px-4 bg-[#0088cc] hover:bg-[#0077b5] text-white font-medium rounded-xl transition-colors ${className}`}
-    >
-      <MessageCircle className="w-5 h-5" />
-      Увійти через Telegram
-    </button>
-  );
-}
 
 // Login page/modal component
 export function LoginPage({ onClose, onSuccess }) {
@@ -126,17 +109,6 @@ export function LoginPage({ onClose, onSuccess }) {
             onSuccess={handleSuccess}
             onError={handleError}
           />
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200 dark:border-gray-700" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">або</span>
-            </div>
-          </div>
-
-          <TelegramLoginButtonStyled />
 
           <p className="text-xs text-center text-gray-400 dark:text-gray-500">
             SMS авторизація буде доступна незабаром
