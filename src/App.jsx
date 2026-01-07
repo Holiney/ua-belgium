@@ -6,6 +6,7 @@ import { ServicesPage, ServiceProfilePage } from './components/ServicesPage';
 import { ProductsPage } from './components/ProductsPage';
 import { FoodPage } from './components/FoodPage';
 import { RentalPage } from './components/RentalPage';
+import { FavoritesPage } from './components/FavoritesPage';
 import { NewsPage, NewsDetailPage } from './components/NewsPage';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { loadFromStorage, saveToStorage } from './utils/storage';
@@ -33,6 +34,11 @@ export default function App() {
     window.addEventListener('app-back-button', handleBackButton);
     return () => window.removeEventListener('app-back-button', handleBackButton);
   }, [navigationHistory, page, pageParams]);
+
+  // Toggle theme
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   // Navigation handler
   const navigate = (newPage, params = {}) => {
@@ -85,6 +91,8 @@ export default function App() {
         return { title: 'Їжа та напої', showBack: false };
       case 'rental':
         return { title: 'Оренда житла', showBack: false };
+      case 'favorites':
+        return { title: 'Обране', showBack: true };
       case 'news':
         return { title: 'Новини', showBack: true };
       case 'news-detail':
@@ -118,6 +126,9 @@ export default function App() {
         title={headerConfig.title}
         showBack={headerConfig.showBack}
         onBack={goBack}
+        onNavigate={navigate}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <PageContainer>
@@ -168,6 +179,10 @@ export default function App() {
 
         {page === 'rental' && (
           <RentalPage />
+        )}
+
+        {page === 'favorites' && (
+          <FavoritesPage />
         )}
 
         {page === 'news' && (

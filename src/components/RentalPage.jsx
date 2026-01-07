@@ -1,10 +1,17 @@
 import { useState } from 'react';
-import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Users, Calendar, Euro } from 'lucide-react';
+import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 
+// Listing types
+const listingTypes = [
+  { id: 'all', name: 'Всі' },
+  { id: 'offer', name: 'Здаю', icon: '🏠', color: 'blue' },
+  { id: 'looking', name: 'Шукаю', icon: '🔍', color: 'purple' },
+];
+
 // Categories for rental
-const categories = [
+export const categories = [
   { id: 'all', name: 'Все', icon: '🏠' },
   { id: 'apartment', name: 'Квартири', icon: '🏢' },
   { id: 'room', name: 'Кімнати', icon: '🚪' },
@@ -12,7 +19,7 @@ const categories = [
   { id: 'short-term', name: 'Подобово', icon: '📅' },
 ];
 
-const cities = [
+export const cities = [
   { id: 'all', name: 'Вся Бельгія' },
   { id: 'brussels', name: 'Брюссель' },
   { id: 'antwerp', name: 'Антверпен' },
@@ -24,9 +31,10 @@ const cities = [
 ];
 
 // Mock data for rentals
-const mockRentals = [
+export const mockRentals = [
   {
     id: '1',
+    listingType: 'offer',
     title: 'Затишна квартира біля центру',
     category: 'apartment',
     price: 950,
@@ -42,6 +50,23 @@ const mockRentals = [
   },
   {
     id: '2',
+    listingType: 'looking',
+    title: 'Шукаю кімнату в Брюсселі',
+    category: 'room',
+    price: 500,
+    priceType: 'month',
+    rooms: 1,
+    city: 'brussels',
+    district: '',
+    description: 'Шукаю кімнату або студію в Брюсселі. Бюджет до €500. Працюю, не курю. Бажано з українськими сусідами.',
+    features: [],
+    contact: { telegram: '@looking_room_bru' },
+    available: 'якнайшвидше',
+    createdAt: new Date('2026-01-05'),
+  },
+  {
+    id: '3',
+    listingType: 'offer',
     title: 'Кімната в спільній квартирі',
     category: 'room',
     price: 450,
@@ -56,7 +81,24 @@ const mockRentals = [
     createdAt: new Date('2026-01-04'),
   },
   {
-    id: '3',
+    id: '4',
+    listingType: 'looking',
+    title: 'Сім\'я шукає квартиру',
+    category: 'apartment',
+    price: 1200,
+    priceType: 'month',
+    rooms: 2,
+    city: 'antwerp',
+    district: '',
+    description: 'Сім\'я з дитиною шукає 2-3 кімнатну квартиру в Антверпені. Бюджет до €1200. Довгострокова оренда.',
+    features: [],
+    contact: { phone: '+32 476 222 333', telegram: '@family_antwerp' },
+    available: 'з лютого',
+    createdAt: new Date('2026-01-04'),
+  },
+  {
+    id: '5',
+    listingType: 'offer',
     title: 'Квартира подобово / короткострок',
     category: 'short-term',
     price: 65,
@@ -71,7 +113,8 @@ const mockRentals = [
     createdAt: new Date('2026-01-03'),
   },
   {
-    id: '4',
+    id: '6',
+    listingType: 'offer',
     title: 'Простора квартира для сім\'ї',
     category: 'apartment',
     price: 1200,
@@ -86,7 +129,24 @@ const mockRentals = [
     createdAt: new Date('2026-01-04'),
   },
   {
-    id: '5',
+    id: '7',
+    listingType: 'looking',
+    title: 'Студентка шукає кімнату',
+    category: 'room',
+    price: 400,
+    priceType: 'month',
+    rooms: 1,
+    city: 'leuven',
+    district: '',
+    description: 'Студентка KU Leuven шукає кімнату біля університету. Бюджет до €400.',
+    features: [],
+    contact: { telegram: '@student_leuven_search' },
+    available: 'з лютого',
+    createdAt: new Date('2026-01-05'),
+  },
+  {
+    id: '8',
+    listingType: 'offer',
     title: 'Маленький будинок з садом',
     category: 'house',
     price: 1400,
@@ -101,7 +161,8 @@ const mockRentals = [
     createdAt: new Date('2026-01-02'),
   },
   {
-    id: '6',
+    id: '9',
+    listingType: 'offer',
     title: 'Кімната для студента',
     category: 'room',
     price: 380,
@@ -116,7 +177,24 @@ const mockRentals = [
     createdAt: new Date('2026-01-05'),
   },
   {
-    id: '7',
+    id: '10',
+    listingType: 'looking',
+    title: 'Шукаю житло подобово',
+    category: 'short-term',
+    price: 80,
+    priceType: 'day',
+    rooms: 1,
+    city: 'bruges',
+    district: '',
+    description: 'Приїжджаємо до Брюгге на 4 дні в лютому. Шукаємо квартиру або студію в центрі.',
+    features: [],
+    contact: { telegram: '@tourists_ua' },
+    available: '10-14 лютого',
+    createdAt: new Date('2026-01-04'),
+  },
+  {
+    id: '11',
+    listingType: 'offer',
     title: 'Квартира на вихідні',
     category: 'short-term',
     price: 80,
@@ -135,6 +213,7 @@ const mockRentals = [
 // Add Rental Form Component
 function AddRentalForm({ onClose, onAdd }) {
   const [formData, setFormData] = useState({
+    listingType: 'offer',
     title: '',
     category: 'apartment',
     price: '',
@@ -155,6 +234,7 @@ function AddRentalForm({ onClose, onAdd }) {
 
     const newRental = {
       id: Date.now().toString(),
+      listingType: formData.listingType,
       title: formData.title,
       category: formData.category,
       price: parseInt(formData.price) || 0,
@@ -189,14 +269,45 @@ function AddRentalForm({ onClose, onAdd }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Listing Type Toggle */}
           <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Заголовок *</label>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Тип оголошення</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, listingType: 'offer' })}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
+                  formData.listingType === 'offer'
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
+                }`}
+              >
+                <span>🏠</span> Здаю
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, listingType: 'looking' })}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
+                  formData.listingType === 'looking'
+                    ? 'bg-purple-500 text-white border-purple-500'
+                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
+                }`}
+              >
+                <span>🔍</span> Шукаю
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">
+              {formData.listingType === 'offer' ? 'Заголовок' : 'Що шукаєте?'} *
+            </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Наприклад: Затишна квартира в центрі"
+              placeholder={formData.listingType === 'offer' ? "Наприклад: Затишна квартира в центрі" : "Наприклад: Шукаю кімнату в Брюсселі"}
               required
             />
           </div>
@@ -216,7 +327,9 @@ function AddRentalForm({ onClose, onAdd }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ціна (€)</label>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">
+                {formData.listingType === 'offer' ? 'Ціна (€)' : 'Бюджет (€)'}
+              </label>
               <input
                 type="number"
                 value={formData.price}
@@ -273,32 +386,36 @@ function AddRentalForm({ onClose, onAdd }) {
                 value={formData.district}
                 onChange={(e) => setFormData({ ...formData, district: e.target.value })}
                 className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="Наприклад: Ixelles"
+                placeholder={formData.listingType === 'offer' ? "Наприклад: Ixelles" : "Бажаний район"}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Коли доступно</label>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">
+              {formData.listingType === 'offer' ? 'Коли доступно' : 'Коли потрібно'}
+            </label>
             <input
               type="text"
               value={formData.available}
               onChange={(e) => setFormData({ ...formData, available: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Наприклад: з 1 лютого або одразу"
+              placeholder={formData.listingType === 'offer' ? "Наприклад: з 1 лютого" : "Наприклад: якнайшвидше"}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Особливості (через кому)</label>
-            <input
-              type="text"
-              value={formData.features}
-              onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-              className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Мебльована, Wi-Fi, Балкон"
-            />
-          </div>
+          {formData.listingType === 'offer' && (
+            <div>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Особливості (через кому)</label>
+              <input
+                type="text"
+                value={formData.features}
+                onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+                className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="Мебльована, Wi-Fi, Балкон"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-2 dark:text-gray-200">Опис</label>
@@ -307,7 +424,7 @@ function AddRentalForm({ onClose, onAdd }) {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               rows={3}
-              placeholder="Додайте деталі про житло..."
+              placeholder={formData.listingType === 'offer' ? "Додайте деталі про житло..." : "Опишіть ваші вимоги до житла..."}
             />
           </div>
 
@@ -350,6 +467,7 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
   const [showContacts, setShowContacts] = useState(false);
   const category = categories.find(c => c.id === rental.category);
   const city = cities.find(c => c.id === rental.city);
+  const isLooking = rental.listingType === 'looking';
 
   const priceLabel = {
     month: '/міс',
@@ -358,12 +476,18 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={`overflow-hidden ${isLooking ? 'border-l-4 border-l-purple-500' : ''}`}>
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{category?.icon}</span>
+              {isLooking ? (
+                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full flex items-center gap-1">
+                  🔍 Шукаю
+                </span>
+              ) : (
+                <span className="text-lg">{category?.icon}</span>
+              )}
               <span className="text-xs text-gray-500 dark:text-gray-400">{category?.name}</span>
             </div>
             <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">{rental.title}</h3>
@@ -382,8 +506,8 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
         </div>
 
         <div className="flex items-center gap-3 mb-2">
-          <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-            €{rental.price}
+          <span className={`text-xl font-bold ${isLooking ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
+            {isLooking ? 'до ' : ''}€{rental.price}
             <span className="text-sm font-normal text-gray-500">{priceLabel[rental.priceType]}</span>
           </span>
           <span className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
@@ -398,13 +522,13 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
         </div>
 
         {rental.available && (
-          <div className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 mb-2">
+          <div className={`flex items-center gap-1 text-sm mb-2 ${isLooking ? 'text-purple-600 dark:text-purple-400' : 'text-green-600 dark:text-green-400'}`}>
             <Calendar className="w-4 h-4" />
             {rental.available}
           </div>
         )}
 
-        {rental.features && rental.features.length > 0 && (
+        {!isLooking && rental.features && rental.features.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {rental.features.slice(0, 3).map((feature, idx) => (
               <span
@@ -428,7 +552,11 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
 
         <button
           onClick={() => setShowContacts(!showContacts)}
-          className="w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+          className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
+            isLooking
+              ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+              : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+          }`}
         >
           {showContacts ? 'Сховати контакти' : 'Показати контакти'}
         </button>
@@ -465,6 +593,7 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
 // Main Rental Page
 export function RentalPage() {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedListingType, setSelectedListingType] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -476,6 +605,7 @@ export function RentalPage() {
   );
 
   const filteredRentals = allRentals.filter(rental => {
+    if (selectedListingType !== 'all' && rental.listingType !== selectedListingType) return false;
     if (selectedCategory !== 'all' && rental.category !== selectedCategory) return false;
     if (selectedCity !== 'all' && rental.city !== selectedCity) return false;
     if (searchQuery && !rental.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -508,6 +638,26 @@ export function RentalPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl"
         />
+      </div>
+
+      {/* Listing Type Filter */}
+      <div className="flex gap-2">
+        {listingTypes.map(type => (
+          <button
+            key={type.id}
+            onClick={() => setSelectedListingType(type.id)}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+              selectedListingType === type.id
+                ? type.id === 'looking'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-blue-500 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            {type.icon && <span>{type.icon}</span>}
+            {type.name}
+          </button>
+        ))}
       </div>
 
       {/* Categories */}

@@ -3,8 +3,15 @@ import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Clock } from 'luc
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 
+// Listing types
+const listingTypes = [
+  { id: 'all', name: 'Всі' },
+  { id: 'offer', name: 'Пропоную', icon: '🍽️', color: 'blue' },
+  { id: 'looking', name: 'Шукаю', icon: '🔍', color: 'purple' },
+];
+
 // Categories for food
-const categories = [
+export const categories = [
   { id: 'all', name: 'Все', icon: '🍽️' },
   { id: 'homemade', name: 'Домашня їжа', icon: '🥘' },
   { id: 'ukrainian', name: 'Продукти з України', icon: '🇺🇦' },
@@ -14,7 +21,7 @@ const categories = [
   { id: 'preserves', name: 'Консервація', icon: '🫙' },
 ];
 
-const cities = [
+export const cities = [
   { id: 'all', name: 'Вся Бельгія' },
   { id: 'brussels', name: 'Брюссель' },
   { id: 'antwerp', name: 'Антверпен' },
@@ -25,9 +32,10 @@ const cities = [
 ];
 
 // Mock data for food
-const mockFoodItems = [
+export const mockFoodItems = [
   {
     id: '1',
+    listingType: 'offer',
     title: 'Домашні вареники з картоплею',
     category: 'homemade',
     price: 12,
@@ -40,6 +48,19 @@ const mockFoodItems = [
   },
   {
     id: '2',
+    listingType: 'looking',
+    title: 'Шукаю домашній борщ',
+    category: 'homemade',
+    price: 10,
+    unit: 'за 1л',
+    city: 'antwerp',
+    description: 'Шукаю хто готує домашній борщ на замовлення в Антверпені. Готовий платити до €10/л',
+    contact: { telegram: '@looking_borsch' },
+    createdAt: new Date('2026-01-05'),
+  },
+  {
+    id: '3',
+    listingType: 'offer',
     title: 'Сало українське, домашнє',
     category: 'ukrainian',
     price: 18,
@@ -50,7 +71,8 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-04'),
   },
   {
-    id: '3',
+    id: '4',
+    listingType: 'offer',
     title: 'Торт Київський на замовлення',
     category: 'baking',
     price: 45,
@@ -62,7 +84,20 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-03'),
   },
   {
-    id: '4',
+    id: '5',
+    listingType: 'looking',
+    title: 'Шукаю українські цукерки',
+    category: 'sweets',
+    price: 0,
+    unit: '',
+    city: 'ghent',
+    description: 'Хтось привозить Roshen або Корона? Шукаю для дітей, скучили за смаком дитинства',
+    contact: { telegram: '@sweets_ghent' },
+    createdAt: new Date('2026-01-05'),
+  },
+  {
+    id: '6',
+    listingType: 'offer',
     title: 'Цукерки Roshen, Корона',
     category: 'sweets',
     price: 8,
@@ -73,7 +108,8 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-05'),
   },
   {
-    id: '5',
+    id: '7',
+    listingType: 'offer',
     title: 'Домашня горілка на горіхах',
     category: 'drinks',
     price: 25,
@@ -84,7 +120,8 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-02'),
   },
   {
-    id: '6',
+    id: '8',
+    listingType: 'offer',
     title: 'Мамина консервація: огірки, помідори',
     category: 'preserves',
     price: 6,
@@ -95,7 +132,8 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-04'),
   },
   {
-    id: '7',
+    id: '9',
+    listingType: 'offer',
     title: 'Борщ домашній',
     category: 'homemade',
     price: 8,
@@ -107,7 +145,20 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-05'),
   },
   {
-    id: '8',
+    id: '10',
+    listingType: 'looking',
+    title: 'Шукаю консервацію з України',
+    category: 'preserves',
+    price: 0,
+    unit: '',
+    city: 'brussels',
+    description: 'Хтось привозить консервацію з України? Шукаю аджику, ікру з баклажанів',
+    contact: { phone: '+32 470 888 999' },
+    createdAt: new Date('2026-01-04'),
+  },
+  {
+    id: '11',
+    listingType: 'offer',
     title: 'Хліб Бородінський',
     category: 'baking',
     price: 5,
@@ -119,7 +170,8 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-03'),
   },
   {
-    id: '9',
+    id: '12',
+    listingType: 'offer',
     title: 'Ковбаса домашня з України',
     category: 'ukrainian',
     price: 22,
@@ -130,7 +182,8 @@ const mockFoodItems = [
     createdAt: new Date('2026-01-04'),
   },
   {
-    id: '10',
+    id: '13',
+    listingType: 'offer',
     title: 'Медовик на замовлення',
     category: 'baking',
     price: 35,
@@ -146,6 +199,7 @@ const mockFoodItems = [
 // Add Food Form Component
 function AddFoodForm({ onClose, onAdd }) {
   const [formData, setFormData] = useState({
+    listingType: 'offer',
     title: '',
     category: 'homemade',
     price: '',
@@ -163,6 +217,7 @@ function AddFoodForm({ onClose, onAdd }) {
 
     const newItem = {
       id: Date.now().toString(),
+      listingType: formData.listingType,
       title: formData.title,
       category: formData.category,
       price: parseInt(formData.price) || 0,
@@ -194,14 +249,45 @@ function AddFoodForm({ onClose, onAdd }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Listing Type Toggle */}
           <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Назва *</label>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Тип оголошення</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, listingType: 'offer' })}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
+                  formData.listingType === 'offer'
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
+                }`}
+              >
+                <span>🍽️</span> Пропоную
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, listingType: 'looking' })}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
+                  formData.listingType === 'looking'
+                    ? 'bg-purple-500 text-white border-purple-500'
+                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
+                }`}
+              >
+                <span>🔍</span> Шукаю
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">
+              {formData.listingType === 'offer' ? 'Що пропонуєте?' : 'Що шукаєте?'} *
+            </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Наприклад: Домашні вареники"
+              placeholder={formData.listingType === 'offer' ? "Наприклад: Домашні вареники" : "Наприклад: Домашній борщ"}
               required
             />
           </div>
@@ -221,7 +307,9 @@ function AddFoodForm({ onClose, onAdd }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ціна (€)</label>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">
+                {formData.listingType === 'offer' ? 'Ціна (€)' : 'Бюджет (€)'}
+              </label>
               <input
                 type="number"
                 value={formData.price}
@@ -262,16 +350,18 @@ function AddFoodForm({ onClose, onAdd }) {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Коли доступно</label>
-            <input
-              type="text"
-              value={formData.availableDays}
-              onChange={(e) => setFormData({ ...formData, availableDays: e.target.value })}
-              className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Наприклад: Сб-Нд або За замовленням"
-            />
-          </div>
+          {formData.listingType === 'offer' && (
+            <div>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Коли доступно</label>
+              <input
+                type="text"
+                value={formData.availableDays}
+                onChange={(e) => setFormData({ ...formData, availableDays: e.target.value })}
+                className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="Наприклад: Сб-Нд або За замовленням"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-2 dark:text-gray-200">Опис</label>
@@ -280,7 +370,7 @@ function AddFoodForm({ onClose, onAdd }) {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               rows={3}
-              placeholder="Додайте деталі про продукт..."
+              placeholder={formData.listingType === 'offer' ? "Додайте деталі про продукт..." : "Опишіть що саме шукаєте..."}
             />
           </div>
 
@@ -323,14 +413,21 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
   const [showContacts, setShowContacts] = useState(false);
   const category = categories.find(c => c.id === item.category);
   const city = cities.find(c => c.id === item.city);
+  const isLooking = item.listingType === 'looking';
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={`overflow-hidden ${isLooking ? 'border-l-4 border-l-purple-500' : ''}`}>
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{category?.icon}</span>
+              {isLooking ? (
+                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full flex items-center gap-1">
+                  🔍 Шукаю
+                </span>
+              ) : (
+                <span className="text-lg">{category?.icon}</span>
+              )}
               <span className="text-xs text-gray-500 dark:text-gray-400">{category?.name}</span>
             </div>
             <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">{item.title}</h3>
@@ -350,8 +447,8 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
 
         <div className="flex items-center gap-2 mb-2">
           {item.price > 0 ? (
-            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-              €{item.price} <span className="text-sm font-normal text-gray-500">{item.unit}</span>
+            <span className={`text-lg font-bold ${isLooking ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
+              {isLooking ? 'до ' : ''}€{item.price} <span className="text-sm font-normal text-gray-500">{item.unit}</span>
             </span>
           ) : (
             <span className="text-sm text-gray-500 dark:text-gray-400">Ціна договірна</span>
@@ -363,7 +460,7 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
             <MapPin className="w-4 h-4" />
             {city?.name || item.city}
           </span>
-          {item.availableDays && (
+          {item.availableDays && !isLooking && (
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               {item.availableDays}
@@ -379,7 +476,11 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
 
         <button
           onClick={() => setShowContacts(!showContacts)}
-          className="w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+          className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
+            isLooking
+              ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+              : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+          }`}
         >
           {showContacts ? 'Сховати контакти' : 'Показати контакти'}
         </button>
@@ -416,6 +517,7 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
 // Main Food Page
 export function FoodPage() {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedListingType, setSelectedListingType] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -427,6 +529,7 @@ export function FoodPage() {
   );
 
   const filteredItems = allItems.filter(item => {
+    if (selectedListingType !== 'all' && item.listingType !== selectedListingType) return false;
     if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
     if (selectedCity !== 'all' && item.city !== selectedCity) return false;
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -464,6 +567,26 @@ export function FoodPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl"
         />
+      </div>
+
+      {/* Listing Type Filter */}
+      <div className="flex gap-2">
+        {listingTypes.map(type => (
+          <button
+            key={type.id}
+            onClick={() => setSelectedListingType(type.id)}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+              selectedListingType === type.id
+                ? type.id === 'looking'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-blue-500 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            {type.icon && <span>{type.icon}</span>}
+            {type.name}
+          </button>
+        ))}
       </div>
 
       {/* Categories */}
