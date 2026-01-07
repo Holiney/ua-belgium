@@ -7,8 +7,10 @@ import { ProductsPage } from './components/ProductsPage';
 import { FoodPage } from './components/FoodPage';
 import { RentalPage } from './components/RentalPage';
 import { FavoritesPage } from './components/FavoritesPage';
+import { ProfilePage } from './components/ProfilePage';
 import { NewsPage, NewsDetailPage } from './components/NewsPage';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { AuthProvider } from './contexts/AuthContext';
 import { loadFromStorage, saveToStorage } from './utils/storage';
 
 export default function App() {
@@ -97,6 +99,8 @@ export default function App() {
         return { title: 'Новини', showBack: true };
       case 'news-detail':
         return { title: 'Новина', showBack: true };
+      case 'profile':
+        return { title: 'Профіль', showBack: false };
       default:
         return { title: 'UA Belgium', showBack: false };
     }
@@ -105,6 +109,7 @@ export default function App() {
   const headerConfig = getHeaderConfig();
 
   return (
+    <AuthProvider>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
       <style>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -195,6 +200,10 @@ export default function App() {
             onBack={goBack}
           />
         )}
+
+        {page === 'profile' && (
+          <ProfilePage onNavigate={navigate} />
+        )}
       </PageContainer>
 
       <BottomNav
@@ -202,5 +211,6 @@ export default function App() {
         onNavigate={navigateFromNav}
       />
     </div>
+    </AuthProvider>
   );
 }
