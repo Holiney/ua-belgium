@@ -23,7 +23,15 @@ export function AuthProvider({ children }) {
       } else {
         setLoading(false);
       }
+    }).catch((err) => {
+      console.error('Error getting session:', err);
+      setLoading(false);
     });
+
+    // Timeout fallback - never stay loading forever
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -38,19 +46,30 @@ export function AuthProvider({ children }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const loadProfile = async (userId) => {
     try {
       const { data, error } = await getProfile(userId);
-      if (!error && data) {
+      if (error) {
+        console.error('Error loading profile:', error);
+        // If profile doesn't exist, create it
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, will be created on next login');
+        }
+      }
+      if (data) {
         setProfile(data);
       }
     } catch (err) {
       console.error('Error loading profile:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const signInWithTelegram = async (telegramData) => {
@@ -80,16 +99,18 @@ export function AuthProvider({ children }) {
         }
       });
 
-      // Update profile
+      // Upsert profile (create if not exists, update if exists)
+      const profileData = {
+        id: data.user.id,
+        telegram_id: telegramData.id,
+        telegram_username: telegramData.username,
+        name: `${telegramData.first_name}${telegramData.last_name ? ' ' + telegramData.last_name : ''}`,
+        avatar_url: telegramData.photo_url,
+      };
+
       await supabase
         .from('profiles')
-        .update({
-          telegram_id: telegramData.id,
-          telegram_username: telegramData.username,
-          name: `${telegramData.first_name}${telegramData.last_name ? ' ' + telegramData.last_name : ''}`,
-          avatar_url: telegramData.photo_url,
-        })
-        .eq('id', data.user.id);
+        .upsert(profileData, { onConflict: 'id' });
 
       await loadProfile(data.user.id);
       return { data, error: null };
