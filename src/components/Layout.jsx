@@ -1,4 +1,4 @@
-import { Home, ShoppingBag, UtensilsCrossed, Building2, Briefcase, ArrowLeft, Heart, Sun, Moon } from 'lucide-react';
+import { Home, ShoppingBag, UtensilsCrossed, Building2, Briefcase, ArrowLeft, Heart, Sun, Moon, User } from 'lucide-react';
 
 export function Header({ title, showBack, onBack, onNavigate, theme, onToggleTheme }) {
   return (
@@ -36,6 +36,17 @@ export function Header({ title, showBack, onBack, onNavigate, theme, onToggleThe
             </button>
           )}
 
+          {/* Profile button */}
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('profile')}
+              className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Профіль"
+            >
+              <User className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            </button>
+          )}
+
           {/* Theme toggle */}
           {onToggleTheme && (
             <button
@@ -70,7 +81,7 @@ export function BottomNav({ currentPage, onNavigate }) {
       <div className="max-w-2xl mx-auto flex justify-around">
         {navItems.map(({ id, label, icon: Icon }) => {
           const isActive = currentPage === id ||
-            (id === 'home' && (currentPage === 'guides' || currentPage === 'category' || currentPage === 'article' || currentPage === 'news' || currentPage === 'news-detail')) ||
+            (id === 'home' && (currentPage === 'guides' || currentPage === 'category' || currentPage === 'article' || currentPage === 'news' || currentPage === 'news-detail' || currentPage === 'favorites' || currentPage === 'profile')) ||
             (id === 'services' && (currentPage === 'service' || currentPage === 'transport'));
 
           return (

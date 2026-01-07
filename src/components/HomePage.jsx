@@ -12,7 +12,7 @@ const emergencyContacts = [
   { id: 'medical', name: 'Медична допомога', number: '1733', description: 'Лікар на черговості', icon: '🏥', color: 'green' },
 ];
 
-const APP_VERSION = 'v2.1';
+const APP_VERSION = 'v3.0';
 
 export function HomePage({ onNavigate }) {
   // Get latest 2 pinned or recent news
