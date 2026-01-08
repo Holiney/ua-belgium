@@ -73,10 +73,11 @@ export function AuthProvider({ children }) {
   };
 
   // Generate credentials based on telegram_id
+  // Using a valid email format that Supabase will accept
   const getTelegramCredentials = (telegramId) => {
-    const email = `tg_${telegramId}@telegram.local`;
+    const email = `telegram-${telegramId}@users.noreply.github.com`;
     // Use telegram_id as base for password - it's unique per user
-    const password = `tg_auth_${telegramId}_secure_key`;
+    const password = `tg_auth_${telegramId}_secure_key_2024`;
     return { email, password };
   };
 
