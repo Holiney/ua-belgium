@@ -26,6 +26,13 @@ export function TelegramLoginButton({ onSuccess, onError }) {
   }, [signInWithTelegram, onSuccess, onError]);
 
   useEffect(() => {
+    // Debug info
+    console.log('=== Telegram Login Debug ===');
+    console.log('Bot username:', TELEGRAM_BOT_USERNAME);
+    console.log('Current domain:', window.location.hostname);
+    console.log('Full URL:', window.location.href);
+    console.log('===========================');
+
     // Create global callback for Telegram Widget
     window.TelegramLoginWidget = {
       dataOnauth: handleTelegramAuth
@@ -44,6 +51,13 @@ export function TelegramLoginButton({ onSuccess, onError }) {
       script.setAttribute('data-radius', '12');
       script.setAttribute('data-onauth', 'onTelegramAuth(user)');
       script.async = true;
+
+      script.onload = () => {
+        console.log('Telegram widget script loaded successfully');
+      };
+      script.onerror = (e) => {
+        console.error('Failed to load Telegram widget script:', e);
+      };
 
       containerRef.current.appendChild(script);
     }
