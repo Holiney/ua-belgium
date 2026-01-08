@@ -25,23 +25,44 @@ export function TelegramLoginButton({ onSuccess, onError }) {
     }
   }, [signInWithTelegram, onSuccess, onError]);
 
+  // Check for Telegram auth data in URL (redirect mode)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1) || window.location.search);
+    const telegramData = {
+      id: params.get('id'),
+      first_name: params.get('first_name'),
+      last_name: params.get('last_name'),
+      username: params.get('username'),
+      photo_url: params.get('photo_url'),
+      auth_date: params.get('auth_date'),
+      hash: params.get('hash')
+    };
+
+    if (telegramData.id && telegramData.hash) {
+      console.log('Found Telegram auth data in URL:', telegramData);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Process auth
+      handleTelegramAuth(telegramData);
+    }
+  }, [handleTelegramAuth]);
+
   useEffect(() => {
     // Debug info
     console.log('=== Telegram Login Debug ===');
     console.log('Bot username:', TELEGRAM_BOT_USERNAME);
     console.log('Current domain:', window.location.hostname);
-    console.log('Full URL:', window.location.href);
+    console.log('Current origin:', window.location.origin);
     console.log('===========================');
 
-    // Create global callback for Telegram Widget
+    // Create global callback for Telegram Widget (backup for popup mode)
     window.TelegramLoginWidget = {
       dataOnauth: handleTelegramAuth
     };
     window.onTelegramAuth = handleTelegramAuth;
 
-    // Load Telegram Widget script
+    // Load Telegram Widget script with REDIRECT mode
     if (containerRef.current && TELEGRAM_BOT_USERNAME) {
-      // Clear previous content
       containerRef.current.innerHTML = '';
 
       const script = document.createElement('script');
@@ -49,11 +70,12 @@ export function TelegramLoginButton({ onSuccess, onError }) {
       script.setAttribute('data-telegram-login', TELEGRAM_BOT_USERNAME);
       script.setAttribute('data-size', 'large');
       script.setAttribute('data-radius', '12');
-      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+      // Use redirect mode instead of callback
+      script.setAttribute('data-auth-url', window.location.origin + '/');
       script.async = true;
 
       script.onload = () => {
-        console.log('Telegram widget script loaded successfully');
+        console.log('Telegram widget script loaded (redirect mode)');
       };
       script.onerror = (e) => {
         console.error('Failed to load Telegram widget script:', e);
