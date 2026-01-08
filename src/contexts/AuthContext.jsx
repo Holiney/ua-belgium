@@ -36,6 +36,7 @@ export function AuthProvider({ children }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);
@@ -57,7 +58,6 @@ export function AuthProvider({ children }) {
       const { data, error } = await getProfile(userId);
       if (error) {
         console.error('Error loading profile:', error);
-        // If profile doesn't exist, create it
         if (error.code === 'PGRST116') {
           console.log('Profile not found, will be created on next login');
         }
@@ -72,48 +72,96 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Generate credentials based on telegram_id
+  const getTelegramCredentials = (telegramId) => {
+    const email = `tg_${telegramId}@telegram.local`;
+    // Use telegram_id as base for password - it's unique per user
+    const password = `tg_auth_${telegramId}_secure_key`;
+    return { email, password };
+  };
+
   const signInWithTelegram = async (telegramData) => {
     if (!isBackendReady || !supabase) {
       return { data: null, error: new Error('Backend not configured') };
     }
 
     try {
-      // Telegram Login Widget returns data like:
+      // Telegram Login Widget returns:
       // { id, first_name, last_name, username, photo_url, auth_date, hash }
+      console.log('Signing in with Telegram data:', telegramData);
 
-      // We'll use Supabase's signInAnonymously first, then link to Telegram
-      // Or we can use a custom JWT approach with Supabase Edge Functions
+      const telegramId = String(telegramData.id);
+      const { email, password } = getTelegramCredentials(telegramId);
+      const fullName = `${telegramData.first_name || ''}${telegramData.last_name ? ' ' + telegramData.last_name : ''}`.trim() || 'Користувач';
 
-      // For now, we'll store Telegram data in user metadata
-      const { data, error } = await supabase.auth.signInAnonymously();
-
-      if (error) throw error;
-
-      // Update user metadata with Telegram info
-      await supabase.auth.updateUser({
-        data: {
-          telegram_id: telegramData.id,
-          name: `${telegramData.first_name}${telegramData.last_name ? ' ' + telegramData.last_name : ''}`,
-          username: telegramData.username,
-          photo_url: telegramData.photo_url,
-        }
+      // Try to sign in first (existing user)
+      let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
-      // Upsert profile (create if not exists, update if exists)
-      const profileData = {
-        id: data.user.id,
-        telegram_id: telegramData.id,
-        telegram_username: telegramData.username,
-        name: `${telegramData.first_name}${telegramData.last_name ? ' ' + telegramData.last_name : ''}`,
-        avatar_url: telegramData.photo_url,
-      };
+      // If user doesn't exist, create new account
+      if (signInError && signInError.message.includes('Invalid login credentials')) {
+        console.log('User not found, creating new account...');
 
-      await supabase
-        .from('profiles')
-        .upsert(profileData, { onConflict: 'id' });
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              telegram_id: telegramId,
+              name: fullName,
+              username: telegramData.username,
+              photo_url: telegramData.photo_url,
+            }
+          }
+        });
 
-      await loadProfile(data.user.id);
-      return { data, error: null };
+        if (signUpError) {
+          console.error('SignUp error:', signUpError);
+          throw signUpError;
+        }
+
+        signInData = signUpData;
+        signInError = null;
+
+        // Profile will be created automatically by database trigger (handle_new_user)
+        // Just wait a bit for trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else if (signInError) {
+        console.error('SignIn error:', signInError);
+        throw signInError;
+      }
+
+      // Update user metadata and profile for existing users
+      if (signInData?.user) {
+        // Update auth user metadata
+        await supabase.auth.updateUser({
+          data: {
+            telegram_id: telegramId,
+            name: fullName,
+            username: telegramData.username,
+            photo_url: telegramData.photo_url,
+          }
+        });
+
+        // Update profile with latest Telegram data
+        const profileData = {
+          id: signInData.user.id,
+          telegram_id: parseInt(telegramId, 10),
+          telegram_username: telegramData.username || null,
+          name: fullName,
+          avatar_url: telegramData.photo_url || null,
+        };
+
+        await supabase
+          .from('profiles')
+          .upsert(profileData, { onConflict: 'id' });
+
+        await loadProfile(signInData.user.id);
+      }
+
+      return { data: signInData, error: null };
     } catch (error) {
       console.error('Telegram sign in error:', error);
       return { data: null, error };
