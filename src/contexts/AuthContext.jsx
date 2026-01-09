@@ -3,9 +3,6 @@ import { supabase, getProfile, isBackendReady } from '../lib/supabase';
 
 const AuthContext = createContext({});
 
-// Storage key for linking telegram_id to anonymous session
-const TELEGRAM_SESSION_KEY = 'ua_belgium_telegram_session';
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -82,104 +79,50 @@ export function AuthProvider({ children }) {
     try {
       console.log('Signing in with Telegram data:', telegramData);
 
-      const telegramId = String(telegramData.id);
-      const fullName = `${telegramData.first_name || ''}${telegramData.last_name ? ' ' + telegramData.last_name : ''}`.trim() || 'Користувач';
-
-      // Check if we have an existing session for this telegram_id
-      const savedSession = localStorage.getItem(TELEGRAM_SESSION_KEY);
-      let existingTelegramId = null;
-
-      if (savedSession) {
-        try {
-          const parsed = JSON.parse(savedSession);
-          existingTelegramId = parsed.telegram_id;
-        } catch (e) {
-          localStorage.removeItem(TELEGRAM_SESSION_KEY);
-        }
-      }
-
-      // Get current session
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-      // If we have a session and it matches the telegram_id, just update profile
-      if (currentSession?.user && existingTelegramId === telegramId) {
-        console.log('Using existing session for telegram_id:', telegramId);
-
-        // Update profile with latest data
-        await updateProfileData(currentSession.user.id, telegramId, telegramData, fullName);
-        await loadProfile(currentSession.user.id);
-
-        return { data: { user: currentSession.user, session: currentSession }, error: null };
-      }
-
-      // Sign out if different user
-      if (currentSession && existingTelegramId && existingTelegramId !== telegramId) {
-        console.log('Different telegram user, signing out previous session');
-        await supabase.auth.signOut();
-      }
-
-      // Create new anonymous session
-      console.log('Creating new anonymous session...');
-      const { data, error } = await supabase.auth.signInAnonymously();
-
-      if (error) {
-        console.error('Anonymous sign in error:', error);
-        throw error;
-      }
-
-      if (!data.user) {
-        throw new Error('No user returned from signInAnonymously');
-      }
-
-      // Save telegram_id to localStorage
-      localStorage.setItem(TELEGRAM_SESSION_KEY, JSON.stringify({
-        telegram_id: telegramId,
-        user_id: data.user.id
-      }));
-
-      // Update user metadata
-      await supabase.auth.updateUser({
-        data: {
-          telegram_id: telegramId,
-          name: fullName,
-          username: telegramData.username,
-          photo_url: telegramData.photo_url,
-        }
+      // Call Edge Function for authentication
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/telegram-auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ telegramData }),
       });
 
-      // Create/update profile
-      await updateProfileData(data.user.id, telegramId, telegramData, fullName);
-      await loadProfile(data.user.id);
+      const result = await response.json();
 
-      return { data, error: null };
+      if (!response.ok) {
+        console.error('Auth error:', result.error);
+        throw new Error(result.error || 'Authentication failed');
+      }
+
+      console.log('Auth result:', result);
+
+      // Set session with the received token
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: result.access_token,
+        refresh_token: result.access_token, // Use same token as refresh for now
+      });
+
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw sessionError;
+      }
+
+      // Set profile from response
+      if (result.profile) {
+        setProfile(result.profile);
+      }
+
+      return { data: sessionData, error: null };
     } catch (error) {
       console.error('Telegram sign in error:', error);
       return { data: null, error };
     }
   };
 
-  const updateProfileData = async (userId, telegramId, telegramData, fullName) => {
-    const profileData = {
-      id: userId,
-      telegram_id: parseInt(telegramId, 10),
-      telegram_username: telegramData.username || null,
-      name: fullName,
-      avatar_url: telegramData.photo_url || null,
-    };
-
-    const { error } = await supabase
-      .from('profiles')
-      .upsert(profileData, { onConflict: 'id' });
-
-    if (error) {
-      console.error('Profile update error:', error);
-    }
-  };
-
   const signOut = async () => {
-    // Clear telegram session
-    localStorage.removeItem(TELEGRAM_SESSION_KEY);
-
     if (!isBackendReady || !supabase) {
       setUser(null);
       setProfile(null);
