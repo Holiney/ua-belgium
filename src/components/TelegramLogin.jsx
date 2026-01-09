@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const TELEGRAM_BOT_USERNAME = 'ua_belgium_bot';
+const TELEGRAM_BOT_USERNAME = 'ua_belg_bot';
 
 // Telegram Login Button using the official widget script
 export function TelegramLoginButton({ onSuccess, onError }) {
