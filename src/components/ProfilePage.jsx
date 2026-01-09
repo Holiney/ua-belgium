@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, SectionTitle } from './Layout';
-import { LoginPage } from './TelegramLogin';
+import { LoginPage } from './PhoneLogin';
 import { supabase } from '../lib/supabase';
 import {
   User,
@@ -116,7 +116,7 @@ export function ProfilePage({ onNavigate }) {
               onClick={() => setShowLogin(true)}
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
             >
-              Увійти через Telegram
+              Увійти за номером телефону
             </button>
           ) : (
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
