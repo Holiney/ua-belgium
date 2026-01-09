@@ -14,7 +14,6 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -27,12 +26,10 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // Timeout fallback
     const timeout = setTimeout(() => {
       setLoading(false);
     }, 5000);
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
@@ -55,11 +52,8 @@ export function AuthProvider({ children }) {
   const loadProfile = async (userId) => {
     try {
       const { data, error } = await getProfile(userId);
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error loading profile:', error);
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found, will be created');
-        }
       }
       if (data) {
         setProfile(data);
@@ -79,7 +73,7 @@ export function AuthProvider({ children }) {
     try {
       console.log('Signing in with Telegram data:', telegramData);
 
-      // Call Edge Function for authentication
+      // Step 1: Call Edge Function to validate and get credentials
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(`${supabaseUrl}/functions/v1/telegram-auth`, {
         method: 'POST',
@@ -91,31 +85,31 @@ export function AuthProvider({ children }) {
       });
 
       const result = await response.json();
+      console.log('Edge function result:', result);
 
       if (!response.ok) {
-        console.error('Auth error:', result.error);
         throw new Error(result.error || 'Authentication failed');
       }
 
-      console.log('Auth result:', result);
-
-      // Set session with the received token
-      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-        access_token: result.access_token,
-        refresh_token: result.access_token, // Use same token as refresh for now
+      // Step 2: Sign in with the credentials from Edge Function
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: result.email,
+        password: result.password,
       });
 
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw sessionError;
+      if (signInError) {
+        console.error('SignIn error:', signInError);
+        throw signInError;
       }
 
-      // Set profile from response
-      if (result.profile) {
-        setProfile(result.profile);
+      console.log('SignIn success:', signInData);
+
+      // Load profile
+      if (signInData?.user) {
+        await loadProfile(signInData.user.id);
       }
 
-      return { data: sessionData, error: null };
+      return { data: signInData, error: null };
     } catch (error) {
       console.error('Telegram sign in error:', error);
       return { data: null, error };
