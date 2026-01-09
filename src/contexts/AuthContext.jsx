@@ -65,6 +65,77 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Send OTP to phone number
+  const sendOtp = async (phone) => {
+    if (!isBackendReady || !supabase) {
+      return { error: new Error('Backend not configured') };
+    }
+
+    try {
+      console.log('Sending OTP to:', phone);
+
+      const { data, error } = await supabase.auth.signInWithOtp({
+        phone: phone,
+      });
+
+      if (error) {
+        console.error('Send OTP error:', error);
+        return { error };
+      }
+
+      console.log('OTP sent successfully');
+      return { data, error: null };
+    } catch (error) {
+      console.error('Send OTP exception:', error);
+      return { error };
+    }
+  };
+
+  // Verify OTP code
+  const verifyOtp = async (phone, token) => {
+    if (!isBackendReady || !supabase) {
+      return { error: new Error('Backend not configured') };
+    }
+
+    try {
+      console.log('Verifying OTP for:', phone);
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: phone,
+        token: token,
+        type: 'sms',
+      });
+
+      if (error) {
+        console.error('Verify OTP error:', error);
+        return { error };
+      }
+
+      console.log('OTP verified successfully:', data);
+
+      // Create/update profile after successful auth
+      if (data.user) {
+        const profileData = {
+          id: data.user.id,
+          phone: phone,
+          name: data.user.user_metadata?.name || 'Користувач',
+        };
+
+        await supabase
+          .from('profiles')
+          .upsert(profileData, { onConflict: 'id' });
+
+        await loadProfile(data.user.id);
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Verify OTP exception:', error);
+      return { error };
+    }
+  };
+
+  // Legacy Telegram auth (keeping for compatibility)
   const signInWithTelegram = async (telegramData) => {
     if (!isBackendReady || !supabase) {
       return { data: null, error: new Error('Backend not configured') };
@@ -73,7 +144,6 @@ export function AuthProvider({ children }) {
     try {
       console.log('Signing in with Telegram data:', telegramData);
 
-      // Step 1: Call Edge Function to validate and get credentials
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(`${supabaseUrl}/functions/v1/telegram-auth`, {
         method: 'POST',
@@ -91,7 +161,6 @@ export function AuthProvider({ children }) {
         throw new Error(result.error || 'Authentication failed');
       }
 
-      // Step 2: Sign in with the credentials from Edge Function
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: result.email,
         password: result.password,
@@ -102,9 +171,6 @@ export function AuthProvider({ children }) {
         throw signInError;
       }
 
-      console.log('SignIn success:', signInData);
-
-      // Load profile
       if (signInData?.user) {
         await loadProfile(signInData.user.id);
       }
@@ -154,6 +220,8 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: !!user,
     isBackendReady,
+    sendOtp,
+    verifyOtp,
     signInWithTelegram,
     signOut,
     updateProfile,
