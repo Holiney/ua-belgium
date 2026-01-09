@@ -10,8 +10,57 @@ import { FavoritesPage } from './components/FavoritesPage';
 import { ProfilePage } from './components/ProfilePage';
 import { NewsPage, NewsDetailPage } from './components/NewsPage';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { loadFromStorage, saveToStorage } from './utils/storage';
+
+// Component to handle Telegram auth redirect
+function TelegramAuthHandler() {
+  const { signInWithTelegram, isAuthenticated } = useAuth();
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    const hash = params.get('hash');
+
+    if (id && hash && !isAuthenticated && !processing) {
+      setProcessing(true);
+      const telegramData = {
+        id: parseInt(id, 10),
+        first_name: params.get('first_name') || '',
+        last_name: params.get('last_name') || '',
+        username: params.get('username') || '',
+        photo_url: params.get('photo_url') || '',
+        auth_date: parseInt(params.get('auth_date'), 10),
+        hash: hash
+      };
+
+      console.log('Processing Telegram auth from URL:', telegramData);
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      signInWithTelegram(telegramData).then(({ error }) => {
+        if (error) {
+          console.error('Auth error:', error);
+          alert('Помилка авторизації: ' + error.message);
+        }
+        setProcessing(false);
+      });
+    }
+  }, [signInWithTelegram, isAuthenticated, processing]);
+
+  if (processing) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
+          <p className="text-gray-700 dark:text-gray-300">Авторизація через Telegram...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 export default function App() {
   const [page, setPage] = useState('home');
@@ -110,6 +159,7 @@ export default function App() {
 
   return (
     <AuthProvider>
+    <TelegramAuthHandler />
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
       <style>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
