@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const TELEGRAM_BOT_USERNAME = 'belguamy_bot';
 
-// Telegram Login Button using the official widget script
+// Telegram Login Button using redirect mode (recommended by Telegram)
 export function TelegramLoginButton({ onSuccess, onError }) {
   const containerRef = useRef(null);
   const widgetLoadedRef = useRef(false);
@@ -11,13 +11,13 @@ export function TelegramLoginButton({ onSuccess, onError }) {
   const [isLoading, setIsLoading] = useState(false);
   const [widgetError, setWidgetError] = useState(false);
 
-  // Callback for Telegram auth result
-  const handleTelegramAuth = useCallback(async (user) => {
-    console.log('Telegram auth received:', user);
+  // Process Telegram auth data
+  const handleTelegramAuth = useCallback(async (telegramData) => {
+    console.log('Processing Telegram auth:', telegramData);
     setIsLoading(true);
 
     try {
-      const { data, error } = await signInWithTelegram(user);
+      const { data, error } = await signInWithTelegram(telegramData);
       if (error) {
         console.error('Sign in error:', error);
         onError?.(error);
@@ -33,7 +33,7 @@ export function TelegramLoginButton({ onSuccess, onError }) {
     }
   }, [signInWithTelegram, onSuccess, onError]);
 
-  // Check URL parameters for auth data (redirect mode)
+  // Check URL parameters for auth data (redirect mode from /api/auth/telegram)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
@@ -50,19 +50,17 @@ export function TelegramLoginButton({ onSuccess, onError }) {
         hash: params.get('hash')
       };
 
-      console.log('Found Telegram auth in URL:', telegramData);
+      console.log('Found verified Telegram auth in URL:', telegramData);
+      // Clean URL
       window.history.replaceState({}, document.title, window.location.pathname);
       handleTelegramAuth(telegramData);
     }
   }, [handleTelegramAuth]);
 
-  // Load Telegram widget script
+  // Load Telegram widget script with redirect mode
   useEffect(() => {
     if (widgetLoadedRef.current || !containerRef.current) return;
     widgetLoadedRef.current = true;
-
-    // Define global callback
-    window.onTelegramAuth = handleTelegramAuth;
 
     const loadWidget = () => {
       const script = document.createElement('script');
@@ -72,7 +70,8 @@ export function TelegramLoginButton({ onSuccess, onError }) {
       script.setAttribute('data-size', 'large');
       script.setAttribute('data-userpic', 'true');
       script.setAttribute('data-radius', '12');
-      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+      // Use redirect mode with backend verification
+      script.setAttribute('data-auth-url', `${window.location.origin}/api/auth/telegram`);
       script.setAttribute('data-request-access', 'write');
 
       script.onerror = () => {
@@ -90,9 +89,8 @@ export function TelegramLoginButton({ onSuccess, onError }) {
 
     return () => {
       clearTimeout(timeoutId);
-      delete window.onTelegramAuth;
     };
-  }, [handleTelegramAuth]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -105,7 +103,7 @@ export function TelegramLoginButton({ onSuccess, onError }) {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Official Telegram Widget */}
+      {/* Official Telegram Widget - Redirect Mode */}
       <div
         ref={containerRef}
         className="flex justify-center min-h-[40px]"
