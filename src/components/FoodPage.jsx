@@ -4,6 +4,16 @@ import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
 
+// Get or create local user ID for anonymous users
+function getLocalUserId() {
+  let localId = loadFromStorage('local-user-id', null);
+  if (!localId) {
+    localId = 'local-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+    saveToStorage('local-user-id', localId);
+  }
+  return localId;
+}
+
 // Categories for food
 export const categories = [
   { id: 'all', name: 'Все', icon: '🍽️' },
@@ -246,6 +256,7 @@ function AddFoodForm({ onClose, onAdd, editItem = null }) {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
+    const userId = user?.id || getLocalUserId();
     const newItem = {
       id: editItem?.id || Date.now().toString(),
       title: formData.title,
@@ -260,8 +271,8 @@ function AddFoodForm({ onClose, onAdd, editItem = null }) {
       },
       availableDays: formData.availableDays,
       images: formData.images,
-      createdAt: editItem?.createdAt || new Date(),
-      userId: user?.id,
+      createdAt: editItem?.createdAt || new Date().toISOString(),
+      userId: userId,
       isUserItem: true,
     };
 
@@ -656,7 +667,9 @@ export function FoodPage({ onNavigate }) {
   };
 
   const isOwner = (item) => {
-    return item.isUserItem && item.userId === user?.id;
+    if (!item.isUserItem) return false;
+    const currentUserId = user?.id || getLocalUserId();
+    return item.userId === currentUserId;
   };
 
   return (

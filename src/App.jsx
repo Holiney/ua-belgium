@@ -68,13 +68,26 @@ export default function App() {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [theme, setTheme] = useState(() => loadFromStorage('app-theme', 'light'));
 
-  // Theme handling
+  // Theme handling - ensure dark class is properly applied
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+    }
     saveToStorage('app-theme', theme);
   }, [theme]);
+
+  // Apply theme on initial load
+  useEffect(() => {
+    const savedTheme = loadFromStorage('app-theme', 'light');
+    if (savedTheme !== theme) {
+      setTheme(savedTheme);
+    }
+  }, []);
 
   // Handle hardware back button on mobile
   useEffect(() => {

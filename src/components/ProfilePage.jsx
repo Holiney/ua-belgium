@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, SectionTitle } from './Layout';
 import { LoginPage } from './PhoneLogin';
-import { supabase } from '../lib/supabase';
+import { loadFromStorage, saveToStorage } from '../utils/storage';
 import {
   User,
   LogOut,
@@ -19,9 +19,10 @@ import {
   Eye,
   Clock,
   Shield,
-  Bell,
   HelpCircle,
-  Camera
+  Camera,
+  Package,
+  Trash2
 } from 'lucide-react';
 
 const cityNames = {
@@ -39,66 +40,89 @@ export function ProfilePage({ onNavigate }) {
   const { user, profile, isAuthenticated, loading, signOut, updateProfile, isBackendReady } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [myListings, setMyListings] = useState({ products: [], food: [], rentals: [] });
-  const [loadingListings, setLoadingListings] = useState(false);
   const [activeTab, setActiveTab] = useState('listings');
   const [editingProfile, setEditingProfile] = useState(false);
+  const [localProfile, setLocalProfile] = useState(() => loadFromStorage('user-profile', null));
   const [editForm, setEditForm] = useState({ name: '', phone: '', city: '' });
 
+  // Load listings from localStorage
   useEffect(() => {
-    if (isAuthenticated && user) {
-      loadMyListings();
-    }
-  }, [isAuthenticated, user]);
+    loadMyListings();
+  }, [user]);
 
   useEffect(() => {
-    if (profile) {
+    const currentProfile = profile || localProfile;
+    if (currentProfile) {
       setEditForm({
-        name: profile.name || '',
-        phone: profile.phone || '',
-        city: profile.city || 'brussels',
+        name: currentProfile.name || '',
+        phone: currentProfile.phone || '',
+        city: currentProfile.city || 'brussels',
       });
     }
-  }, [profile]);
+  }, [profile, localProfile]);
 
-  const loadMyListings = async () => {
-    if (!user) return;
-    setLoadingListings(true);
+  const loadMyListings = () => {
+    const userId = user?.id || loadFromStorage('local-user-id', null);
 
-    try {
-      const [productsRes, foodRes, rentalsRes] = await Promise.all([
-        supabase.from('products').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('food_items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('rentals').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      ]);
+    // Load from localStorage
+    const allProducts = loadFromStorage('products-items', []);
+    const allFood = loadFromStorage('food-items', []);
+    const allRentals = loadFromStorage('rental-items', []);
 
-      setMyListings({
-        products: productsRes.data || [],
-        food: foodRes.data || [],
-        rentals: rentalsRes.data || [],
-      });
-    } catch (err) {
-      console.error('Error loading listings:', err);
-    }
+    // Filter by userId if available, otherwise show all user items
+    const filterByUser = (items) => {
+      if (userId) {
+        return items.filter(item => item.userId === userId || item.isUserItem);
+      }
+      return items.filter(item => item.isUserItem);
+    };
 
-    setLoadingListings(false);
+    setMyListings({
+      products: filterByUser(allProducts),
+      food: filterByUser(allFood),
+      rentals: filterByUser(allRentals),
+    });
   };
 
   const handleSignOut = async () => {
     if (confirm('Ви впевнені, що хочете вийти?')) {
       await signOut();
+      // Clear local data
+      saveToStorage('local-user-id', null);
+      saveToStorage('user-profile', null);
+      setLocalProfile(null);
     }
   };
 
   const handleSaveProfile = async () => {
-    const { error } = await updateProfile(editForm);
-    if (!error) {
-      setEditingProfile(false);
-    } else {
-      alert('Помилка збереження профілю');
+    // Save to Supabase if available
+    if (isBackendReady && user) {
+      const { error } = await updateProfile(editForm);
+      if (error) {
+        alert('Помилка збереження профілю');
+        return;
+      }
     }
+
+    // Always save locally too
+    const updatedProfile = { ...localProfile, ...editForm };
+    saveToStorage('user-profile', updatedProfile);
+    setLocalProfile(updatedProfile);
+    setEditingProfile(false);
+  };
+
+  const handleDeleteListing = (type, itemId) => {
+    if (!confirm('Видалити це оголошення?')) return;
+
+    const storageKey = `${type}-items`;
+    const items = loadFromStorage(storageKey, []);
+    const updated = items.filter(item => item.id !== itemId);
+    saveToStorage(storageKey, updated);
+    loadMyListings();
   };
 
   const totalListings = myListings.products.length + myListings.food.length + myListings.rentals.length;
+  const currentProfile = profile || localProfile;
 
   if (loading) {
     return (
@@ -108,7 +132,7 @@ export function ProfilePage({ onNavigate }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !localProfile) {
     return (
       <div className="space-y-6 animate-fade-in pb-8">
         {/* Welcome Card */}
@@ -211,16 +235,16 @@ export function ProfilePage({ onNavigate }) {
         <div className="px-6 pb-6 -mt-12">
           <div className="flex items-end gap-4">
             <div className="relative">
-              {profile?.avatar_url ? (
+              {currentProfile?.avatar_url ? (
                 <img
-                  src={profile.avatar_url}
-                  alt={profile.name}
+                  src={currentProfile.avatar_url}
+                  alt={currentProfile.name}
                   className="w-24 h-24 rounded-2xl object-cover border-4 border-white dark:border-gray-800 shadow-lg"
                 />
               ) : (
                 <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-yellow-400 flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
                   <span className="text-3xl text-white font-bold">
-                    {profile?.name?.charAt(0) || 'U'}
+                    {currentProfile?.name?.charAt(0) || 'U'}
                   </span>
                 </div>
               )}
@@ -231,12 +255,12 @@ export function ProfilePage({ onNavigate }) {
 
             <div className="flex-1 min-w-0 pb-2">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
-                {profile?.name || 'Користувач'}
+                {currentProfile?.name || 'Користувач'}
               </h2>
-              {profile?.city && (
+              {currentProfile?.city && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
-                  {cityNames[profile.city] || profile.city}
+                  {cityNames[currentProfile.city] || currentProfile.city}
                 </p>
               )}
             </div>
@@ -299,141 +323,133 @@ export function ProfilePage({ onNavigate }) {
       </div>
 
       {/* Contact Info */}
-      <Card className="p-5">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4">
-          Контактна інформація
-        </h3>
-        <div className="space-y-4">
-          {profile?.phone && (
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                <Phone className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Телефон</div>
-                <div className="font-medium text-gray-900 dark:text-white">{profile.phone}</div>
-              </div>
-            </div>
-          )}
-          {profile?.telegram_username && (
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                <MessageCircle className="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Telegram</div>
-                <a
-                  href={`https://t.me/${profile.telegram_username}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-blue-600 dark:text-blue-400"
-                >
-                  @{profile.telegram_username}
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* My Listings */}
-      {loadingListings ? (
-        <div className="flex items-center justify-center py-10">
-          <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
-        </div>
-      ) : totalListings === 0 ? (
-        <Card className="p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <ShoppingBag className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-            Немає оголошень
+      {(currentProfile?.phone || currentProfile?.telegram_username) && (
+        <Card className="p-5">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4">
+            Контактна інформація
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Створіть своє перше оголошення!
-          </p>
+          <div className="space-y-4">
+            {currentProfile?.phone && (
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                  <Phone className="w-5 h-5 text-green-500" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Телефон</div>
+                  <div className="font-medium text-gray-900 dark:text-white">{currentProfile.phone}</div>
+                </div>
+              </div>
+            )}
+            {currentProfile?.telegram_username && (
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                  <MessageCircle className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Telegram</div>
+                  <a
+                    href={`https://t.me/${currentProfile.telegram_username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-blue-600 dark:text-blue-400"
+                  >
+                    @{currentProfile.telegram_username}
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
-      ) : (
-        <div className="space-y-4">
-          {/* Products */}
-          {myListings.products.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-purple-500" />
-                  Товари ({myListings.products.length})
-                </h3>
-                <button
-                  onClick={() => onNavigate('products')}
-                  className="text-sm text-blue-600 dark:text-blue-400"
-                >
-                  Усі
-                </button>
-              </div>
-              <div className="space-y-2">
-                {myListings.products.slice(0, 3).map((item) => (
-                  <ListingCard key={item.id} item={item} type="product" />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Food */}
-          {myListings.food.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <UtensilsCrossed className="w-5 h-5 text-orange-500" />
-                  Їжа ({myListings.food.length})
-                </h3>
-                <button
-                  onClick={() => onNavigate('food')}
-                  className="text-sm text-blue-600 dark:text-blue-400"
-                >
-                  Усі
-                </button>
-              </div>
-              <div className="space-y-2">
-                {myListings.food.slice(0, 3).map((item) => (
-                  <ListingCard key={item.id} item={item} type="food" />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Rentals */}
-          {myListings.rentals.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-green-500" />
-                  Оренда ({myListings.rentals.length})
-                </h3>
-                <button
-                  onClick={() => onNavigate('rental')}
-                  className="text-sm text-blue-600 dark:text-blue-400"
-                >
-                  Усі
-                </button>
-              </div>
-              <div className="space-y-2">
-                {myListings.rentals.slice(0, 3).map((item) => (
-                  <ListingCard key={item.id} item={item} type="rental" />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
       )}
 
+      {/* My Listings Section */}
+      <section>
+        <SectionTitle>Мої оголошення</SectionTitle>
+
+        {totalListings === 0 ? (
+          <Card className="p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <Package className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              Немає оголошень
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Створіть своє перше оголошення!
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {/* Products */}
+            {myListings.products.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-purple-500" />
+                  Товари ({myListings.products.length})
+                </h4>
+                {myListings.products.map((item) => (
+                  <ListingCard
+                    key={item.id}
+                    item={item}
+                    type="products"
+                    icon={<ShoppingBag className="w-4 h-4 text-purple-500" />}
+                    onDelete={() => handleDeleteListing('products', item.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Food */}
+            {myListings.food.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <UtensilsCrossed className="w-4 h-4 text-orange-500" />
+                  Їжа ({myListings.food.length})
+                </h4>
+                {myListings.food.map((item) => (
+                  <ListingCard
+                    key={item.id}
+                    item={item}
+                    type="food"
+                    icon={<UtensilsCrossed className="w-4 h-4 text-orange-500" />}
+                    onDelete={() => handleDeleteListing('food', item.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Rentals */}
+            {myListings.rentals.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-green-500" />
+                  Оренда ({myListings.rentals.length})
+                </h4>
+                {myListings.rentals.map((item) => (
+                  <ListingCard
+                    key={item.id}
+                    item={item}
+                    type="rental"
+                    icon={<Building2 className="w-4 h-4 text-green-500" />}
+                    onDelete={() => handleDeleteListing('rental', item.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* Sign Out */}
-      <button
-        onClick={handleSignOut}
-        className="w-full flex items-center justify-center gap-2 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-      >
-        <LogOut className="w-5 h-5" />
-        Вийти з акаунту
-      </button>
+      {(isAuthenticated || localProfile) && (
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center justify-center gap-2 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          Вийти з акаунту
+        </button>
+      )}
 
       {/* Edit Profile Modal */}
       {editingProfile && (
@@ -452,7 +468,7 @@ export function ProfilePage({ onNavigate }) {
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -465,7 +481,7 @@ export function ProfilePage({ onNavigate }) {
                   value={editForm.phone}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                   placeholder="+32 xxx xx xx xx"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -476,7 +492,7 @@ export function ProfilePage({ onNavigate }) {
                 <select
                   value={editForm.city}
                   onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="brussels">Брюссель</option>
                   <option value="antwerp">Антверпен</option>
@@ -507,35 +523,23 @@ export function ProfilePage({ onNavigate }) {
           </div>
         </div>
       )}
+
+      {showLogin && (
+        <LoginPage
+          onClose={() => setShowLogin(false)}
+          onSuccess={() => setShowLogin(false)}
+        />
+      )}
     </div>
   );
 }
 
 // Listing card component
-function ListingCard({ item, type }) {
-  const statusColors = {
-    active: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-    sold: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
-    rented: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
-    inactive: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
-  };
-
-  const statusLabels = {
-    active: 'Активне',
-    sold: 'Продано',
-    rented: 'Здано',
-    inactive: 'Неактивне',
-  };
-
-  const typeIcons = {
-    product: <ShoppingBag className="w-4 h-4 text-purple-500" />,
-    food: <UtensilsCrossed className="w-4 h-4 text-orange-500" />,
-    rental: <Building2 className="w-4 h-4 text-green-500" />,
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+function ListingCard({ item, type, icon, onDelete }) {
+  const formatDate = (date) => {
+    if (!date) return '';
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
   };
 
   return (
@@ -549,37 +553,33 @@ function ListingCard({ item, type }) {
           />
         ) : (
           <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-            {typeIcons[type]}
+            {icon}
           </div>
         )}
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[item.status]}`}>
-              {statusLabels[item.status]}
-            </span>
-          </div>
           <h4 className="font-medium text-gray-900 dark:text-white truncate">
             {item.title}
           </h4>
           <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {item.price && (
+            {item.price !== undefined && item.price !== null && (
               <span className="font-semibold text-blue-600 dark:text-blue-400">
-                €{item.price}
+                {item.isFree ? 'Безкоштовно' : `€${item.price}`}
               </span>
             )}
             <span className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              {item.views || 0}
-            </span>
-            <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {formatDate(item.created_at)}
+              {formatDate(item.createdAt)}
             </span>
           </div>
         </div>
 
-        <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        <button
+          onClick={onDelete}
+          className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     </Card>
   );
