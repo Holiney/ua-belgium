@@ -1,14 +1,8 @@
-import { useState } from 'react';
-import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar, Image, ChevronLeft, ChevronRight, Trash2, Edit2, LogIn } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
-
-// Listing types
-const listingTypes = [
-  { id: 'all', name: 'Всі' },
-  { id: 'offer', name: 'Здаю', icon: '🏠', color: 'blue' },
-  { id: 'looking', name: 'Шукаю', icon: '🔍', color: 'purple' },
-];
+import { useAuth } from '../contexts/AuthContext';
 
 // Categories for rental
 export const categories = [
@@ -30,11 +24,10 @@ export const cities = [
   { id: 'other', name: 'Інше місто' },
 ];
 
-// Mock data for rentals
+// Mock data for rentals (only offers)
 export const mockRentals = [
   {
     id: '1',
-    listingType: 'offer',
     title: 'Затишна квартира біля центру',
     category: 'apartment',
     price: 950,
@@ -46,27 +39,11 @@ export const mockRentals = [
     features: ['Мебльована', 'Метро поруч', 'Балкон'],
     contact: { phone: '+32 470 111 222', telegram: '@rental_bru' },
     available: 'з 1 лютого',
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '2',
-    listingType: 'looking',
-    title: 'Шукаю кімнату в Брюсселі',
-    category: 'room',
-    price: 500,
-    priceType: 'month',
-    rooms: 1,
-    city: 'brussels',
-    district: '',
-    description: 'Шукаю кімнату або студію в Брюсселі. Бюджет до €500. Працюю, не курю. Бажано з українськими сусідами.',
-    features: [],
-    contact: { telegram: '@looking_room_bru' },
-    available: 'якнайшвидше',
+    images: [],
     createdAt: new Date('2026-01-05'),
   },
   {
     id: '3',
-    listingType: 'offer',
     title: 'Кімната в спільній квартирі',
     category: 'room',
     price: 450,
@@ -78,27 +55,11 @@ export const mockRentals = [
     features: ['Мебльована', 'Українські сусіди', 'Wi-Fi'],
     contact: { telegram: '@room_gent' },
     available: 'одразу',
-    createdAt: new Date('2026-01-04'),
-  },
-  {
-    id: '4',
-    listingType: 'looking',
-    title: 'Сім\'я шукає квартиру',
-    category: 'apartment',
-    price: 1200,
-    priceType: 'month',
-    rooms: 2,
-    city: 'antwerp',
-    district: '',
-    description: 'Сім\'я з дитиною шукає 2-3 кімнатну квартиру в Антверпені. Бюджет до €1200. Довгострокова оренда.',
-    features: [],
-    contact: { phone: '+32 476 222 333', telegram: '@family_antwerp' },
-    available: 'з лютого',
+    images: [],
     createdAt: new Date('2026-01-04'),
   },
   {
     id: '5',
-    listingType: 'offer',
     title: 'Квартира подобово / короткострок',
     category: 'short-term',
     price: 65,
@@ -110,11 +71,11 @@ export const mockRentals = [
     features: ['Повністю обладнана', 'Wi-Fi', 'Пральна машина'],
     contact: { phone: '+32 485 333 444' },
     available: 'перевірте дати',
+    images: [],
     createdAt: new Date('2026-01-03'),
   },
   {
     id: '6',
-    listingType: 'offer',
     title: 'Простора квартира для сім\'ї',
     category: 'apartment',
     price: 1200,
@@ -126,27 +87,11 @@ export const mockRentals = [
     features: ['Паркування', 'Тераса', 'Кладовка'],
     contact: { telegram: '@flat_antwerp' },
     available: 'з 15 січня',
+    images: [],
     createdAt: new Date('2026-01-04'),
   },
   {
-    id: '7',
-    listingType: 'looking',
-    title: 'Студентка шукає кімнату',
-    category: 'room',
-    price: 400,
-    priceType: 'month',
-    rooms: 1,
-    city: 'leuven',
-    district: '',
-    description: 'Студентка KU Leuven шукає кімнату біля університету. Бюджет до €400.',
-    features: [],
-    contact: { telegram: '@student_leuven_search' },
-    available: 'з лютого',
-    createdAt: new Date('2026-01-05'),
-  },
-  {
     id: '8',
-    listingType: 'offer',
     title: 'Маленький будинок з садом',
     category: 'house',
     price: 1400,
@@ -158,11 +103,11 @@ export const mockRentals = [
     features: ['Сад', 'Гараж', 'Тихе місце'],
     contact: { phone: '+32 499 555 666' },
     available: 'з 1 березня',
+    images: [],
     createdAt: new Date('2026-01-02'),
   },
   {
     id: '9',
-    listingType: 'offer',
     title: 'Кімната для студента',
     category: 'room',
     price: 380,
@@ -174,27 +119,11 @@ export const mockRentals = [
     features: ['Поруч університет', 'Спільна кухня', 'Тихо'],
     contact: { telegram: '@student_leuven' },
     available: 'з лютого',
+    images: [],
     createdAt: new Date('2026-01-05'),
   },
   {
-    id: '10',
-    listingType: 'looking',
-    title: 'Шукаю житло подобово',
-    category: 'short-term',
-    price: 80,
-    priceType: 'day',
-    rooms: 1,
-    city: 'bruges',
-    district: '',
-    description: 'Приїжджаємо до Брюгге на 4 дні в лютому. Шукаємо квартиру або студію в центрі.',
-    features: [],
-    contact: { telegram: '@tourists_ua' },
-    available: '10-14 лютого',
-    createdAt: new Date('2026-01-04'),
-  },
-  {
     id: '11',
-    listingType: 'offer',
     title: 'Квартира на вихідні',
     category: 'short-term',
     price: 80,
@@ -206,26 +135,100 @@ export const mockRentals = [
     features: ['Центр міста', 'Вигляд на канал', 'Повністю обладнана'],
     contact: { phone: '+32 468 777 888' },
     available: 'перевірте дати',
+    images: [],
     createdAt: new Date('2026-01-03'),
   },
 ];
 
+// Image Upload Component
+function ImageUpload({ images, onChange, maxImages = 5 }) {
+  const inputRef = useRef(null);
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const remainingSlots = maxImages - images.length;
+    const filesToProcess = files.slice(0, remainingSlots);
+
+    filesToProcess.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        onChange([...images, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const removeImage = (index) => {
+    onChange(images.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium dark:text-gray-200">
+        Фото (до {maxImages} шт.)
+      </label>
+
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          {images.map((img, idx) => (
+            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+              <img src={img} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {images.length < maxImages && (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center gap-2 hover:border-blue-500 transition-colors"
+        >
+          <Image className="w-8 h-8 text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Додати фото ({images.length}/{maxImages})
+          </span>
+        </button>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+    </div>
+  );
+}
+
 // Add Rental Form Component
-function AddRentalForm({ onClose, onAdd }) {
+function AddRentalForm({ onClose, onAdd, editItem = null }) {
+  const { user, profile } = useAuth();
   const [formData, setFormData] = useState({
-    listingType: 'offer',
-    title: '',
-    category: 'apartment',
-    price: '',
-    priceType: 'month',
-    rooms: '1',
-    city: 'brussels',
-    district: '',
-    description: '',
-    features: '',
-    phone: '',
-    telegram: '',
-    available: '',
+    title: editItem?.title || '',
+    category: editItem?.category || 'apartment',
+    price: editItem?.price?.toString() || '',
+    priceType: editItem?.priceType || 'month',
+    rooms: editItem?.rooms?.toString() || '1',
+    city: editItem?.city || profile?.city || 'brussels',
+    district: editItem?.district || '',
+    description: editItem?.description || '',
+    features: editItem?.features?.join(', ') || '',
+    phone: editItem?.contact?.phone || profile?.phone || '',
+    telegram: editItem?.contact?.telegram || (profile?.telegram_username ? `@${profile.telegram_username}` : ''),
+    available: editItem?.available || '',
+    images: editItem?.images || [],
   });
 
   const handleSubmit = (e) => {
@@ -233,8 +236,7 @@ function AddRentalForm({ onClose, onAdd }) {
     if (!formData.title.trim()) return;
 
     const newRental = {
-      id: Date.now().toString(),
-      listingType: formData.listingType,
+      id: editItem?.id || Date.now().toString(),
       title: formData.title,
       category: formData.category,
       price: parseInt(formData.price) || 0,
@@ -249,7 +251,9 @@ function AddRentalForm({ onClose, onAdd }) {
         telegram: formData.telegram,
       },
       available: formData.available,
-      createdAt: new Date(),
+      images: formData.images,
+      createdAt: editItem?.createdAt || new Date(),
+      userId: user?.id,
       isUserItem: true,
     };
 
@@ -262,52 +266,28 @@ function AddRentalForm({ onClose, onAdd }) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-3xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold dark:text-white">Додати оголошення</h2>
+          <h2 className="text-xl font-bold dark:text-white">
+            {editItem ? 'Редагувати оголошення' : 'Додати оголошення'}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Listing Type Toggle */}
-          <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Тип оголошення</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, listingType: 'offer' })}
-                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
-                  formData.listingType === 'offer'
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
-                }`}
-              >
-                <span>🏠</span> Здаю
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, listingType: 'looking' })}
-                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
-                  formData.listingType === 'looking'
-                    ? 'bg-purple-500 text-white border-purple-500'
-                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
-                }`}
-              >
-                <span>🔍</span> Шукаю
-              </button>
-            </div>
-          </div>
+          <ImageUpload
+            images={formData.images}
+            onChange={(images) => setFormData({ ...formData, images })}
+          />
 
           <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">
-              {formData.listingType === 'offer' ? 'Заголовок' : 'Що шукаєте?'} *
-            </label>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Заголовок *</label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder={formData.listingType === 'offer' ? "Наприклад: Затишна квартира в центрі" : "Наприклад: Шукаю кімнату в Брюсселі"}
+              placeholder="Наприклад: Затишна квартира в центрі"
               required
             />
           </div>
@@ -327,9 +307,7 @@ function AddRentalForm({ onClose, onAdd }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">
-                {formData.listingType === 'offer' ? 'Ціна (€)' : 'Бюджет (€)'}
-              </label>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ціна (€)</label>
               <input
                 type="number"
                 value={formData.price}
@@ -386,36 +364,32 @@ function AddRentalForm({ onClose, onAdd }) {
                 value={formData.district}
                 onChange={(e) => setFormData({ ...formData, district: e.target.value })}
                 className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder={formData.listingType === 'offer' ? "Наприклад: Ixelles" : "Бажаний район"}
+                placeholder="Наприклад: Ixelles"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">
-              {formData.listingType === 'offer' ? 'Коли доступно' : 'Коли потрібно'}
-            </label>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Коли доступно</label>
             <input
               type="text"
               value={formData.available}
               onChange={(e) => setFormData({ ...formData, available: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder={formData.listingType === 'offer' ? "Наприклад: з 1 лютого" : "Наприклад: якнайшвидше"}
+              placeholder="Наприклад: з 1 лютого"
             />
           </div>
 
-          {formData.listingType === 'offer' && (
-            <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Особливості (через кому)</label>
-              <input
-                type="text"
-                value={formData.features}
-                onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-                className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="Мебльована, Wi-Fi, Балкон"
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Особливості (через кому)</label>
+            <input
+              type="text"
+              value={formData.features}
+              onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+              className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              placeholder="Мебльована, Wi-Fi, Балкон"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium mb-2 dark:text-gray-200">Опис</label>
@@ -424,7 +398,7 @@ function AddRentalForm({ onClose, onAdd }) {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               rows={3}
-              placeholder={formData.listingType === 'offer' ? "Додайте деталі про житло..." : "Опишіть ваші вимоги до житла..."}
+              placeholder="Додайте деталі про житло..."
             />
           </div>
 
@@ -454,7 +428,7 @@ function AddRentalForm({ onClose, onAdd }) {
             type="submit"
             className="w-full py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
           >
-            Опублікувати
+            {editItem ? 'Зберегти' : 'Опублікувати'}
           </button>
         </form>
       </div>
@@ -463,11 +437,11 @@ function AddRentalForm({ onClose, onAdd }) {
 }
 
 // Rental Card Component
-function RentalCard({ rental, isFavorite, onToggleFavorite }) {
+function RentalCard({ rental, isFavorite, onToggleFavorite, isOwner, onEdit, onDelete }) {
   const [showContacts, setShowContacts] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
   const category = categories.find(c => c.id === rental.category);
   const city = cities.find(c => c.id === rental.city);
-  const isLooking = rental.listingType === 'looking';
 
   const priceLabel = {
     month: '/міс',
@@ -476,38 +450,79 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
   };
 
   return (
-    <Card className={`overflow-hidden ${isLooking ? 'border-l-4 border-l-purple-500' : ''}`}>
+    <Card className="overflow-hidden">
+      {rental.images && rental.images.length > 0 && (
+        <div className="relative aspect-video bg-gray-100 dark:bg-gray-700">
+          <img
+            src={rental.images[imageIndex]}
+            alt={rental.title}
+            className="w-full h-full object-cover"
+          />
+          {rental.images.length > 1 && (
+            <>
+              <button
+                onClick={() => setImageIndex(i => (i > 0 ? i - 1 : rental.images.length - 1))}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 rounded-full text-white"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setImageIndex(i => (i < rental.images.length - 1 ? i + 1 : 0))}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 rounded-full text-white"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/50 rounded-full text-white text-xs">
+                {imageIndex + 1}/{rental.images.length}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              {isLooking ? (
-                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full flex items-center gap-1">
-                  🔍 Шукаю
-                </span>
-              ) : (
-                <span className="text-lg">{category?.icon}</span>
-              )}
+              <span className="text-lg">{category?.icon}</span>
               <span className="text-xs text-gray-500 dark:text-gray-400">{category?.name}</span>
             </div>
             <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">{rental.title}</h3>
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(rental.id);
-            }}
-            className="p-2 -m-2"
-          >
-            <Heart
-              className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
-            />
-          </button>
+          <div className="flex items-center gap-1">
+            {isOwner && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEdit(rental); }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                >
+                  <Edit2 className="w-4 h-4 text-gray-400" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(rental.id); }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                >
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                </button>
+              </>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(rental.id);
+              }}
+              className="p-2 -m-2"
+            >
+              <Heart
+                className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
+              />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 mb-2">
-          <span className={`text-xl font-bold ${isLooking ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
-            {isLooking ? 'до ' : ''}€{rental.price}
+          <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            €{rental.price}
             <span className="text-sm font-normal text-gray-500">{priceLabel[rental.priceType]}</span>
           </span>
           <span className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
@@ -522,13 +537,13 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
         </div>
 
         {rental.available && (
-          <div className={`flex items-center gap-1 text-sm mb-2 ${isLooking ? 'text-purple-600 dark:text-purple-400' : 'text-green-600 dark:text-green-400'}`}>
+          <div className="flex items-center gap-1 text-sm mb-2 text-green-600 dark:text-green-400">
             <Calendar className="w-4 h-4" />
             {rental.available}
           </div>
         )}
 
-        {!isLooking && rental.features && rental.features.length > 0 && (
+        {rental.features && rental.features.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {rental.features.slice(0, 3).map((feature, idx) => (
               <span
@@ -552,11 +567,7 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
 
         <button
           onClick={() => setShowContacts(!showContacts)}
-          className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
-            isLooking
-              ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
-              : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-          }`}
+          className="w-full py-2 text-sm font-medium rounded-lg transition-colors text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
         >
           {showContacts ? 'Сховати контакти' : 'Показати контакти'}
         </button>
@@ -590,10 +601,46 @@ function RentalCard({ rental, isFavorite, onToggleFavorite }) {
   );
 }
 
+// Auth Required Modal
+function AuthRequiredModal({ onClose, onLogin }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+          <LogIn className="w-8 h-8 text-blue-500" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          Потрібна авторизація
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">
+          Щоб додавати оголошення, будь ласка, увійдіть у свій акаунт
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 font-medium"
+          >
+            Скасувати
+          </button>
+          <button
+            onClick={onLogin}
+            className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600"
+          >
+            Увійти
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Main Rental Page
-export function RentalPage() {
+export function RentalPage({ onNavigate }) {
+  const { user, isAuthenticated } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedListingType, setSelectedListingType] = useState('all');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [editingRental, setEditingRental] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -605,17 +652,45 @@ export function RentalPage() {
   );
 
   const filteredRentals = allRentals.filter(rental => {
-    if (selectedListingType !== 'all' && rental.listingType !== selectedListingType) return false;
     if (selectedCategory !== 'all' && rental.category !== selectedCategory) return false;
     if (selectedCity !== 'all' && rental.city !== selectedCity) return false;
     if (searchQuery && !rental.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
+  const handleAddClick = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+    } else {
+      setShowAddForm(true);
+    }
+  };
+
   const handleAddRental = (rental) => {
-    const updated = [rental, ...userRentals];
+    const existingIndex = userRentals.findIndex(r => r.id === rental.id);
+    let updated;
+    if (existingIndex >= 0) {
+      updated = [...userRentals];
+      updated[existingIndex] = rental;
+    } else {
+      updated = [rental, ...userRentals];
+    }
     setUserRentals(updated);
     saveToStorage('rental-items', updated);
+    setEditingRental(null);
+  };
+
+  const handleDeleteRental = (rentalId) => {
+    if (confirm('Видалити це оголошення?')) {
+      const updated = userRentals.filter(r => r.id !== rentalId);
+      setUserRentals(updated);
+      saveToStorage('rental-items', updated);
+    }
+  };
+
+  const handleEditRental = (rental) => {
+    setEditingRental(rental);
+    setShowAddForm(true);
   };
 
   const toggleFavorite = (rentalId) => {
@@ -624,6 +699,10 @@ export function RentalPage() {
       : [...favorites, rentalId];
     setFavorites(updated);
     saveToStorage('rental-favorites', updated);
+  };
+
+  const isOwner = (rental) => {
+    return rental.isUserItem && rental.userId === user?.id;
   };
 
   return (
@@ -638,26 +717,6 @@ export function RentalPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl"
         />
-      </div>
-
-      {/* Listing Type Filter */}
-      <div className="flex gap-2">
-        {listingTypes.map(type => (
-          <button
-            key={type.id}
-            onClick={() => setSelectedListingType(type.id)}
-            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              selectedListingType === type.id
-                ? type.id === 'looking'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-blue-500 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
-            }`}
-          >
-            {type.icon && <span>{type.icon}</span>}
-            {type.name}
-          </button>
-        ))}
       </div>
 
       {/* Categories */}
@@ -706,6 +765,9 @@ export function RentalPage() {
             rental={rental}
             isFavorite={favorites.includes(rental.id)}
             onToggleFavorite={toggleFavorite}
+            isOwner={isOwner(rental)}
+            onEdit={handleEditRental}
+            onDelete={handleDeleteRental}
           />
         ))}
       </div>
@@ -718,17 +780,29 @@ export function RentalPage() {
 
       {/* Add Button */}
       <button
-        onClick={() => setShowAddForm(true)}
+        onClick={handleAddClick}
         className="fixed bottom-24 right-4 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors z-30"
       >
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* Add Form Modal */}
+      {/* Auth Required Modal */}
+      {showAuthModal && (
+        <AuthRequiredModal
+          onClose={() => setShowAuthModal(false)}
+          onLogin={() => {
+            setShowAuthModal(false);
+            if (onNavigate) onNavigate('profile');
+          }}
+        />
+      )}
+
+      {/* Add/Edit Form Modal */}
       {showAddForm && (
         <AddRentalForm
-          onClose={() => setShowAddForm(false)}
+          onClose={() => { setShowAddForm(false); setEditingRental(null); }}
           onAdd={handleAddRental}
+          editItem={editingRental}
         />
       )}
     </div>

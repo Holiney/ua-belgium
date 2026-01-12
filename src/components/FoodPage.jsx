@@ -1,14 +1,8 @@
-import { useState } from 'react';
-import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Clock } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Clock, Image, ChevronLeft, ChevronRight, Trash2, Edit2, LogIn } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
-
-// Listing types
-const listingTypes = [
-  { id: 'all', name: 'Всі' },
-  { id: 'offer', name: 'Пропоную', icon: '🍽️', color: 'blue' },
-  { id: 'looking', name: 'Шукаю', icon: '🔍', color: 'purple' },
-];
+import { useAuth } from '../contexts/AuthContext';
 
 // Categories for food
 export const categories = [
@@ -31,11 +25,10 @@ export const cities = [
   { id: 'other', name: 'Інше місто' },
 ];
 
-// Mock data for food
+// Mock data for food (only offers)
 export const mockFoodItems = [
   {
     id: '1',
-    listingType: 'offer',
     title: 'Домашні вареники з картоплею',
     category: 'homemade',
     price: 12,
@@ -43,24 +36,12 @@ export const mockFoodItems = [
     city: 'brussels',
     description: 'Ліплю на замовлення. Можу з картоплею, сиром, вишнею. Мінімальне замовлення 1 кг.',
     contact: { phone: '+32 470 111 222', telegram: '@varenyky_be' },
+    images: [],
     availableDays: 'Сб-Нд',
     createdAt: new Date('2026-01-05'),
   },
   {
-    id: '2',
-    listingType: 'looking',
-    title: 'Шукаю домашній борщ',
-    category: 'homemade',
-    price: 10,
-    unit: 'за 1л',
-    city: 'antwerp',
-    description: 'Шукаю хто готує домашній борщ на замовлення в Антверпені. Готовий платити до €10/л',
-    contact: { telegram: '@looking_borsch' },
-    createdAt: new Date('2026-01-05'),
-  },
-  {
     id: '3',
-    listingType: 'offer',
     title: 'Сало українське, домашнє',
     category: 'ukrainian',
     price: 18,
@@ -68,11 +49,11 @@ export const mockFoodItems = [
     city: 'antwerp',
     description: 'Привезено з України. Сало з прошарком, засолене з часником та перцем.',
     contact: { telegram: '@ukraine_products' },
+    images: [],
     createdAt: new Date('2026-01-04'),
   },
   {
     id: '4',
-    listingType: 'offer',
     title: 'Торт Київський на замовлення',
     category: 'baking',
     price: 45,
@@ -80,24 +61,12 @@ export const mockFoodItems = [
     city: 'brussels',
     description: 'Готую справжній Київський торт за оригінальним рецептом. Замовлення за 3 дні.',
     contact: { phone: '+32 485 333 444', telegram: '@cakes_brussels' },
+    images: [],
     availableDays: 'За замовленням',
     createdAt: new Date('2026-01-03'),
   },
   {
-    id: '5',
-    listingType: 'looking',
-    title: 'Шукаю українські цукерки',
-    category: 'sweets',
-    price: 0,
-    unit: '',
-    city: 'ghent',
-    description: 'Хтось привозить Roshen або Корона? Шукаю для дітей, скучили за смаком дитинства',
-    contact: { telegram: '@sweets_ghent' },
-    createdAt: new Date('2026-01-05'),
-  },
-  {
     id: '6',
-    listingType: 'offer',
     title: 'Цукерки Roshen, Корона',
     category: 'sweets',
     price: 8,
@@ -105,11 +74,11 @@ export const mockFoodItems = [
     city: 'ghent',
     description: 'Привезені з України. Є різні види: Roshen, Корона, АВК. Пишіть для списку.',
     contact: { telegram: '@ua_sweets' },
+    images: [],
     createdAt: new Date('2026-01-05'),
   },
   {
     id: '7',
-    listingType: 'offer',
     title: 'Домашня горілка на горіхах',
     category: 'drinks',
     price: 25,
@@ -117,11 +86,11 @@ export const mockFoodItems = [
     city: 'liege',
     description: 'Настоянка на волоських горіхах. Є також на меду та травах.',
     contact: { phone: '+32 499 555 666' },
+    images: [],
     createdAt: new Date('2026-01-02'),
   },
   {
     id: '8',
-    listingType: 'offer',
     title: 'Мамина консервація: огірки, помідори',
     category: 'preserves',
     price: 6,
@@ -129,11 +98,11 @@ export const mockFoodItems = [
     city: 'brussels',
     description: 'Домашні мариновані огірки та помідори. Як в Україні! 0.5л банки.',
     contact: { telegram: '@mama_konservy' },
+    images: [],
     createdAt: new Date('2026-01-04'),
   },
   {
     id: '9',
-    listingType: 'offer',
     title: 'Борщ домашній',
     category: 'homemade',
     price: 8,
@@ -141,24 +110,12 @@ export const mockFoodItems = [
     city: 'brussels',
     description: 'Готую український борщ на замовлення. Зі сметаною та пампушками +2€.',
     contact: { phone: '+32 476 777 888', telegram: '@borsch_be' },
+    images: [],
     availableDays: 'Пт-Нд',
     createdAt: new Date('2026-01-05'),
   },
   {
-    id: '10',
-    listingType: 'looking',
-    title: 'Шукаю консервацію з України',
-    category: 'preserves',
-    price: 0,
-    unit: '',
-    city: 'brussels',
-    description: 'Хтось привозить консервацію з України? Шукаю аджику, ікру з баклажанів',
-    contact: { phone: '+32 470 888 999' },
-    createdAt: new Date('2026-01-04'),
-  },
-  {
     id: '11',
-    listingType: 'offer',
     title: 'Хліб Бородінський',
     category: 'baking',
     price: 5,
@@ -166,12 +123,12 @@ export const mockFoodItems = [
     city: 'antwerp',
     description: 'Печу справжній Бородінський хліб. Замовлення за день.',
     contact: { telegram: '@bread_ua' },
+    images: [],
     availableDays: 'За замовленням',
     createdAt: new Date('2026-01-03'),
   },
   {
     id: '12',
-    listingType: 'offer',
     title: 'Ковбаса домашня з України',
     category: 'ukrainian',
     price: 22,
@@ -179,11 +136,11 @@ export const mockFoodItems = [
     city: 'brussels',
     description: 'Привезено з Закарпаття. Сиров\'ялена ковбаса.',
     contact: { phone: '+32 468 999 000' },
+    images: [],
     createdAt: new Date('2026-01-04'),
   },
   {
     id: '13',
-    listingType: 'offer',
     title: 'Медовик на замовлення',
     category: 'baking',
     price: 35,
@@ -191,24 +148,98 @@ export const mockFoodItems = [
     city: 'ghent',
     description: 'Класичний медовик з натурального меду. 8 порцій.',
     contact: { telegram: '@medovyk_gent' },
+    images: [],
     availableDays: 'За замовленням',
     createdAt: new Date('2026-01-02'),
   },
 ];
 
+// Image Upload Component
+function ImageUpload({ images, onChange, maxImages = 5 }) {
+  const inputRef = useRef(null);
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const remainingSlots = maxImages - images.length;
+    const filesToProcess = files.slice(0, remainingSlots);
+
+    filesToProcess.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        onChange([...images, e.target.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const removeImage = (index) => {
+    onChange(images.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium dark:text-gray-200">
+        Фото (до {maxImages} шт.)
+      </label>
+
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          {images.map((img, idx) => (
+            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+              <img src={img} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {images.length < maxImages && (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center gap-2 hover:border-blue-500 transition-colors"
+        >
+          <Image className="w-8 h-8 text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Додати фото ({images.length}/{maxImages})
+          </span>
+        </button>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+    </div>
+  );
+}
+
 // Add Food Form Component
-function AddFoodForm({ onClose, onAdd }) {
+function AddFoodForm({ onClose, onAdd, editItem = null }) {
+  const { user, profile } = useAuth();
   const [formData, setFormData] = useState({
-    listingType: 'offer',
-    title: '',
-    category: 'homemade',
-    price: '',
-    unit: 'за порцію',
-    city: 'brussels',
-    description: '',
-    phone: '',
-    telegram: '',
-    availableDays: '',
+    title: editItem?.title || '',
+    category: editItem?.category || 'homemade',
+    price: editItem?.price?.toString() || '',
+    unit: editItem?.unit || 'за порцію',
+    city: editItem?.city || profile?.city || 'brussels',
+    description: editItem?.description || '',
+    phone: editItem?.contact?.phone || profile?.phone || '',
+    telegram: editItem?.contact?.telegram || (profile?.telegram_username ? `@${profile.telegram_username}` : ''),
+    availableDays: editItem?.availableDays || '',
+    images: editItem?.images || [],
   });
 
   const handleSubmit = (e) => {
@@ -216,8 +247,7 @@ function AddFoodForm({ onClose, onAdd }) {
     if (!formData.title.trim()) return;
 
     const newItem = {
-      id: Date.now().toString(),
-      listingType: formData.listingType,
+      id: editItem?.id || Date.now().toString(),
       title: formData.title,
       category: formData.category,
       price: parseInt(formData.price) || 0,
@@ -229,7 +259,9 @@ function AddFoodForm({ onClose, onAdd }) {
         telegram: formData.telegram,
       },
       availableDays: formData.availableDays,
-      createdAt: new Date(),
+      images: formData.images,
+      createdAt: editItem?.createdAt || new Date(),
+      userId: user?.id,
       isUserItem: true,
     };
 
@@ -242,52 +274,28 @@ function AddFoodForm({ onClose, onAdd }) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-3xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold dark:text-white">Додати оголошення</h2>
+          <h2 className="text-xl font-bold dark:text-white">
+            {editItem ? 'Редагувати оголошення' : 'Додати оголошення'}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Listing Type Toggle */}
-          <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Тип оголошення</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, listingType: 'offer' })}
-                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
-                  formData.listingType === 'offer'
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
-                }`}
-              >
-                <span>🍽️</span> Пропоную
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, listingType: 'looking' })}
-                className={`flex-1 py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 ${
-                  formData.listingType === 'looking'
-                    ? 'bg-purple-500 text-white border-purple-500'
-                    : 'border-gray-300 dark:border-gray-600 dark:text-gray-200'
-                }`}
-              >
-                <span>🔍</span> Шукаю
-              </button>
-            </div>
-          </div>
+          <ImageUpload
+            images={formData.images}
+            onChange={(images) => setFormData({ ...formData, images })}
+          />
 
           <div>
-            <label className="block text-sm font-medium mb-2 dark:text-gray-200">
-              {formData.listingType === 'offer' ? 'Що пропонуєте?' : 'Що шукаєте?'} *
-            </label>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Назва *</label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder={formData.listingType === 'offer' ? "Наприклад: Домашні вареники" : "Наприклад: Домашній борщ"}
+              placeholder="Наприклад: Домашні вареники"
               required
             />
           </div>
@@ -307,9 +315,7 @@ function AddFoodForm({ onClose, onAdd }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">
-                {formData.listingType === 'offer' ? 'Ціна (€)' : 'Бюджет (€)'}
-              </label>
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ціна (€)</label>
               <input
                 type="number"
                 value={formData.price}
@@ -350,18 +356,16 @@ function AddFoodForm({ onClose, onAdd }) {
             </select>
           </div>
 
-          {formData.listingType === 'offer' && (
-            <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Коли доступно</label>
-              <input
-                type="text"
-                value={formData.availableDays}
-                onChange={(e) => setFormData({ ...formData, availableDays: e.target.value })}
-                className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="Наприклад: Сб-Нд або За замовленням"
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium mb-2 dark:text-gray-200">Коли доступно</label>
+            <input
+              type="text"
+              value={formData.availableDays}
+              onChange={(e) => setFormData({ ...formData, availableDays: e.target.value })}
+              className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              placeholder="Наприклад: Сб-Нд або За замовленням"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium mb-2 dark:text-gray-200">Опис</label>
@@ -370,7 +374,7 @@ function AddFoodForm({ onClose, onAdd }) {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               rows={3}
-              placeholder={formData.listingType === 'offer' ? "Додайте деталі про продукт..." : "Опишіть що саме шукаєте..."}
+              placeholder="Додайте деталі про продукт..."
             />
           </div>
 
@@ -400,7 +404,7 @@ function AddFoodForm({ onClose, onAdd }) {
             type="submit"
             className="w-full py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
           >
-            Опублікувати
+            {editItem ? 'Зберегти' : 'Опублікувати'}
           </button>
         </form>
       </div>
@@ -409,46 +413,87 @@ function AddFoodForm({ onClose, onAdd }) {
 }
 
 // Food Card Component
-function FoodCard({ item, isFavorite, onToggleFavorite }) {
+function FoodCard({ item, isFavorite, onToggleFavorite, isOwner, onEdit, onDelete }) {
   const [showContacts, setShowContacts] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
   const category = categories.find(c => c.id === item.category);
   const city = cities.find(c => c.id === item.city);
-  const isLooking = item.listingType === 'looking';
 
   return (
-    <Card className={`overflow-hidden ${isLooking ? 'border-l-4 border-l-purple-500' : ''}`}>
+    <Card className="overflow-hidden">
+      {item.images && item.images.length > 0 && (
+        <div className="relative aspect-video bg-gray-100 dark:bg-gray-700">
+          <img
+            src={item.images[imageIndex]}
+            alt={item.title}
+            className="w-full h-full object-cover"
+          />
+          {item.images.length > 1 && (
+            <>
+              <button
+                onClick={() => setImageIndex(i => (i > 0 ? i - 1 : item.images.length - 1))}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 rounded-full text-white"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setImageIndex(i => (i < item.images.length - 1 ? i + 1 : 0))}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 rounded-full text-white"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/50 rounded-full text-white text-xs">
+                {imageIndex + 1}/{item.images.length}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              {isLooking ? (
-                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full flex items-center gap-1">
-                  🔍 Шукаю
-                </span>
-              ) : (
-                <span className="text-lg">{category?.icon}</span>
-              )}
+              <span className="text-lg">{category?.icon}</span>
               <span className="text-xs text-gray-500 dark:text-gray-400">{category?.name}</span>
             </div>
             <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2">{item.title}</h3>
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(item.id);
-            }}
-            className="p-2 -m-2"
-          >
-            <Heart
-              className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
-            />
-          </button>
+          <div className="flex items-center gap-1">
+            {isOwner && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                >
+                  <Edit2 className="w-4 h-4 text-gray-400" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                >
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                </button>
+              </>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(item.id);
+              }}
+              className="p-2 -m-2"
+            >
+              <Heart
+                className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
+              />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mb-2">
           {item.price > 0 ? (
-            <span className={`text-lg font-bold ${isLooking ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
-              {isLooking ? 'до ' : ''}€{item.price} <span className="text-sm font-normal text-gray-500">{item.unit}</span>
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+              €{item.price} <span className="text-sm font-normal text-gray-500">{item.unit}</span>
             </span>
           ) : (
             <span className="text-sm text-gray-500 dark:text-gray-400">Ціна договірна</span>
@@ -460,7 +505,7 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
             <MapPin className="w-4 h-4" />
             {city?.name || item.city}
           </span>
-          {item.availableDays && !isLooking && (
+          {item.availableDays && (
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               {item.availableDays}
@@ -476,11 +521,7 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
 
         <button
           onClick={() => setShowContacts(!showContacts)}
-          className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
-            isLooking
-              ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
-              : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-          }`}
+          className="w-full py-2 text-sm font-medium rounded-lg transition-colors text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
         >
           {showContacts ? 'Сховати контакти' : 'Показати контакти'}
         </button>
@@ -514,10 +555,46 @@ function FoodCard({ item, isFavorite, onToggleFavorite }) {
   );
 }
 
+// Auth Required Modal
+function AuthRequiredModal({ onClose, onLogin }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+          <LogIn className="w-8 h-8 text-blue-500" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          Потрібна авторизація
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">
+          Щоб додавати оголошення, будь ласка, увійдіть у свій акаунт
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 font-medium"
+          >
+            Скасувати
+          </button>
+          <button
+            onClick={onLogin}
+            className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600"
+          >
+            Увійти
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Main Food Page
-export function FoodPage() {
+export function FoodPage({ onNavigate }) {
+  const { user, isAuthenticated } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedListingType, setSelectedListingType] = useState('all');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -529,17 +606,45 @@ export function FoodPage() {
   );
 
   const filteredItems = allItems.filter(item => {
-    if (selectedListingType !== 'all' && item.listingType !== selectedListingType) return false;
     if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
     if (selectedCity !== 'all' && item.city !== selectedCity) return false;
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
+  const handleAddClick = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+    } else {
+      setShowAddForm(true);
+    }
+  };
+
   const handleAddItem = (item) => {
-    const updated = [item, ...userItems];
+    const existingIndex = userItems.findIndex(i => i.id === item.id);
+    let updated;
+    if (existingIndex >= 0) {
+      updated = [...userItems];
+      updated[existingIndex] = item;
+    } else {
+      updated = [item, ...userItems];
+    }
     setUserItems(updated);
     saveToStorage('food-items', updated);
+    setEditingItem(null);
+  };
+
+  const handleDeleteItem = (itemId) => {
+    if (confirm('Видалити це оголошення?')) {
+      const updated = userItems.filter(i => i.id !== itemId);
+      setUserItems(updated);
+      saveToStorage('food-items', updated);
+    }
+  };
+
+  const handleEditItem = (item) => {
+    setEditingItem(item);
+    setShowAddForm(true);
   };
 
   const toggleFavorite = (itemId) => {
@@ -548,6 +653,10 @@ export function FoodPage() {
       : [...favorites, itemId];
     setFavorites(updated);
     saveToStorage('food-favorites', updated);
+  };
+
+  const isOwner = (item) => {
+    return item.isUserItem && item.userId === user?.id;
   };
 
   return (
@@ -567,26 +676,6 @@ export function FoodPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl"
         />
-      </div>
-
-      {/* Listing Type Filter */}
-      <div className="flex gap-2">
-        {listingTypes.map(type => (
-          <button
-            key={type.id}
-            onClick={() => setSelectedListingType(type.id)}
-            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              selectedListingType === type.id
-                ? type.id === 'looking'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-blue-500 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
-            }`}
-          >
-            {type.icon && <span>{type.icon}</span>}
-            {type.name}
-          </button>
-        ))}
       </div>
 
       {/* Categories */}
@@ -635,6 +724,9 @@ export function FoodPage() {
             item={item}
             isFavorite={favorites.includes(item.id)}
             onToggleFavorite={toggleFavorite}
+            isOwner={isOwner(item)}
+            onEdit={handleEditItem}
+            onDelete={handleDeleteItem}
           />
         ))}
       </div>
@@ -647,17 +739,29 @@ export function FoodPage() {
 
       {/* Add Button */}
       <button
-        onClick={() => setShowAddForm(true)}
+        onClick={handleAddClick}
         className="fixed bottom-24 right-4 w-14 h-14 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors z-30"
       >
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* Add Form Modal */}
+      {/* Auth Required Modal */}
+      {showAuthModal && (
+        <AuthRequiredModal
+          onClose={() => setShowAuthModal(false)}
+          onLogin={() => {
+            setShowAuthModal(false);
+            if (onNavigate) onNavigate('profile');
+          }}
+        />
+      )}
+
+      {/* Add/Edit Form Modal */}
       {showAddForm && (
         <AddFoodForm
-          onClose={() => setShowAddForm(false)}
+          onClose={() => { setShowAddForm(false); setEditingItem(null); }}
           onAdd={handleAddItem}
+          editItem={editingItem}
         />
       )}
     </div>

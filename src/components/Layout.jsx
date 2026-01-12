@@ -13,8 +13,11 @@ export function Header({ title, showBack, onBack, onNavigate, theme, onToggleThe
           </button>
         )}
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-yellow-400 flex items-center justify-center shadow-lg">
-            <span className="text-white text-lg">🇺🇦</span>
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg flex items-center justify-center bg-gradient-to-br from-blue-600 to-yellow-400">
+            <div className="flex items-center text-xs font-bold text-white">
+              <span className="text-[10px]">🇧🇪</span>
+              <span className="text-[10px]">🇺🇦</span>
+            </div>
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white">

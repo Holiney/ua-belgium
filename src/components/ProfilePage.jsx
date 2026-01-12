@@ -17,8 +17,23 @@ import {
   Edit2,
   Plus,
   Eye,
-  Clock
+  Clock,
+  Shield,
+  Bell,
+  HelpCircle,
+  Camera
 } from 'lucide-react';
+
+const cityNames = {
+  brussels: 'Брюссель',
+  antwerp: 'Антверпен',
+  ghent: 'Гент',
+  liege: 'Льєж',
+  charleroi: 'Шарлеруа',
+  bruges: 'Брюгге',
+  leuven: 'Лювен',
+  other: 'Інше',
+};
 
 export function ProfilePage({ onNavigate }) {
   const { user, profile, isAuthenticated, loading, signOut, updateProfile, isBackendReady } = useAuth();
@@ -83,11 +98,6 @@ export function ProfilePage({ onNavigate }) {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
-  };
-
   const totalListings = myListings.products.length + myListings.food.length + myListings.rentals.length;
 
   if (loading) {
@@ -101,50 +111,86 @@ export function ProfilePage({ onNavigate }) {
   if (!isAuthenticated) {
     return (
       <div className="space-y-6 animate-fade-in pb-8">
-        <Card className="p-6 text-center">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <User className="w-10 h-10 text-gray-400" />
+        {/* Welcome Card */}
+        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-yellow-400 rounded-3xl p-6 text-white relative overflow-hidden">
+          <div className="absolute top-2 right-2 opacity-20 text-6xl">👤</div>
+          <div className="relative z-10">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+              <User className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-center mb-2">
+              Вітаємо в UA Belgium!
+            </h2>
+            <p className="text-blue-100 text-sm text-center leading-relaxed">
+              Увійдіть, щоб додавати оголошення та керувати своїм профілем
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            Ви не увійшли
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Увійдіть, щоб додавати оголошення, зберігати обране та керувати своїм профілем
-          </p>
-          {isBackendReady ? (
-            <button
-              onClick={() => setShowLogin(true)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
-            >
-              Увійти за номером телефону
-            </button>
-          ) : (
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+        </div>
+
+        {/* Login Button */}
+        {isBackendReady ? (
+          <button
+            onClick={() => setShowLogin(true)}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors flex items-center justify-center gap-3 shadow-lg"
+          >
+            <Phone className="w-5 h-5" />
+            Увійти за номером телефону
+          </button>
+        ) : (
+          <Card className="p-4">
+            <div className="flex items-center gap-3 text-yellow-700 dark:text-yellow-400">
+              <Shield className="w-5 h-5" />
+              <p className="text-sm">
                 Авторизація буде доступна після налаштування бекенду
               </p>
             </div>
-          )}
+          </Card>
+        )}
+
+        {/* Benefits */}
+        <Card className="p-5">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-blue-500" />
+            Переваги авторизації
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                <ShoppingBag className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white">Додавайте оголошення</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Товари, їжа, оренда</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                <MessageCircle className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white">Отримуйте повідомлення</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Зв'язок з покупцями</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                <Settings className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white">Керуйте оголошеннями</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Редагування та видалення</p>
+              </div>
+            </div>
+          </div>
         </Card>
 
+        {/* Help */}
         <Card className="p-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-            Переваги авторизації:
-          </h3>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <li className="flex items-center gap-2">
-              <Plus className="w-4 h-4 text-green-500" />
-              Додавайте власні оголошення
-            </li>
-            <li className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-blue-500" />
-              Отримуйте повідомлення від покупців
-            </li>
-            <li className="flex items-center gap-2">
-              <Settings className="w-4 h-4 text-purple-500" />
-              Керуйте своїми оголошеннями
-            </li>
-          </ul>
+          <button className="w-full flex items-center gap-3 text-gray-700 dark:text-gray-300">
+            <HelpCircle className="w-5 h-5 text-gray-400" />
+            <span>Потрібна допомога?</span>
+            <ChevronRight className="w-5 h-5 text-gray-400 ml-auto" />
+          </button>
         </Card>
 
         {showLogin && (
@@ -160,233 +206,258 @@ export function ProfilePage({ onNavigate }) {
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Profile Header */}
-      <Card className="p-6">
-        <div className="flex items-start gap-4">
-          <div className="relative">
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-yellow-400 flex items-center justify-center">
-                <span className="text-2xl text-white font-bold">
-                  {profile?.name?.charAt(0) || 'U'}
-                </span>
-              </div>
-            )}
+      <Card className="overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-yellow-400 h-24" />
+        <div className="px-6 pb-6 -mt-12">
+          <div className="flex items-end gap-4">
+            <div className="relative">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.name}
+                  className="w-24 h-24 rounded-2xl object-cover border-4 border-white dark:border-gray-800 shadow-lg"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-yellow-400 flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-lg">
+                  <span className="text-3xl text-white font-bold">
+                    {profile?.name?.charAt(0) || 'U'}
+                  </span>
+                </div>
+              )}
+              <button className="absolute bottom-0 right-0 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700">
+                <Camera className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="flex-1 min-w-0 pb-2">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+                {profile?.name || 'Користувач'}
+              </h2>
+              {profile?.city && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  {cityNames[profile.city] || profile.city}
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={() => setEditingProfile(true)}
+              className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              <Edit2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            </button>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
-              {profile?.name || 'Користувач'}
-            </h2>
-            {profile?.telegram_username && (
-              <a
-                href={`https://t.me/${profile.telegram_username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-500 flex items-center gap-1"
-              >
-                <MessageCircle className="w-4 h-4" />
-                @{profile.telegram_username}
-              </a>
-            )}
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
-              <span className="flex items-center gap-1">
-                <ShoppingBag className="w-4 h-4" />
-                {totalListings} оголошень
-              </span>
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{myListings.products.length}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Товарів</div>
+            </div>
+            <div className="text-center border-x border-gray-200 dark:border-gray-700">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{myListings.food.length}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Їжі</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{myListings.rentals.length}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Оренда</div>
             </div>
           </div>
-
-          <button
-            onClick={() => setEditingProfile(true)}
-            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <Edit2 className="w-5 h-5 text-gray-400" />
-          </button>
         </div>
       </Card>
 
-      {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-        {[
-          { id: 'listings', label: 'Мої оголошення' },
-          { id: 'settings', label: 'Налаштування' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-colors ${
-              activeTab === tab.id
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Quick Add Buttons */}
+      <div className="grid grid-cols-3 gap-3">
+        <button
+          onClick={() => onNavigate('products')}
+          className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex flex-col items-center gap-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+        >
+          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+            <Plus className="w-5 h-5 text-purple-500" />
+          </div>
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Товар</span>
+        </button>
+        <button
+          onClick={() => onNavigate('food')}
+          className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex flex-col items-center gap-2 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+        >
+          <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+            <Plus className="w-5 h-5 text-orange-500" />
+          </div>
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Їжа</span>
+        </button>
+        <button
+          onClick={() => onNavigate('rental')}
+          className="p-4 bg-green-50 dark:bg-green-900/20 rounded-2xl flex flex-col items-center gap-2 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+        >
+          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
+            <Plus className="w-5 h-5 text-green-500" />
+          </div>
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Оренда</span>
+        </button>
       </div>
 
-      {/* Listings Tab */}
-      {activeTab === 'listings' && (
+      {/* Contact Info */}
+      <Card className="p-5">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">
+          Контактна інформація
+        </h3>
         <div className="space-y-4">
-          {/* Quick Add Buttons */}
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => onNavigate('products', { openCreate: true })}
-              className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-center"
-            >
-              <ShoppingBag className="w-6 h-6 mx-auto mb-1 text-purple-500" />
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">+ Товар</span>
-            </button>
-            <button
-              onClick={() => onNavigate('food', { openCreate: true })}
-              className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-center"
-            >
-              <UtensilsCrossed className="w-6 h-6 mx-auto mb-1 text-orange-500" />
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">+ Їжа</span>
-            </button>
-            <button
-              onClick={() => onNavigate('rental', { openCreate: true })}
-              className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-center"
-            >
-              <Building2 className="w-6 h-6 mx-auto mb-1 text-green-500" />
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">+ Оренда</span>
-            </button>
-          </div>
-
-          {loadingListings ? (
-            <div className="flex items-center justify-center py-10">
-              <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
-            </div>
-          ) : totalListings === 0 ? (
-            <Card className="p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                <ShoppingBag className="w-8 h-8 text-gray-400" />
+          {profile?.phone && (
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                <Phone className="w-5 h-5 text-green-500" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                Немає оголошень
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Створіть своє перше оголошення!
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {/* Products */}
-              {myListings.products.length > 0 && (
-                <section>
-                  <SectionTitle>Товари ({myListings.products.length})</SectionTitle>
-                  <div className="space-y-2">
-                    {myListings.products.map((item) => (
-                      <ListingCard key={item.id} item={item} type="product" />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Food */}
-              {myListings.food.length > 0 && (
-                <section>
-                  <SectionTitle>Їжа ({myListings.food.length})</SectionTitle>
-                  <div className="space-y-2">
-                    {myListings.food.map((item) => (
-                      <ListingCard key={item.id} item={item} type="food" />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Rentals */}
-              {myListings.rentals.length > 0 && (
-                <section>
-                  <SectionTitle>Оренда ({myListings.rentals.length})</SectionTitle>
-                  <div className="space-y-2">
-                    {myListings.rentals.map((item) => (
-                      <ListingCard key={item.id} item={item} type="rental" />
-                    ))}
-                  </div>
-                </section>
-              )}
+              <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Телефон</div>
+                <div className="font-medium text-gray-900 dark:text-white">{profile.phone}</div>
+              </div>
             </div>
+          )}
+          {profile?.telegram_username && (
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                <MessageCircle className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Telegram</div>
+                <a
+                  href={`https://t.me/${profile.telegram_username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-600 dark:text-blue-400"
+                >
+                  @{profile.telegram_username}
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* My Listings */}
+      {loadingListings ? (
+        <div className="flex items-center justify-center py-10">
+          <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
+        </div>
+      ) : totalListings === 0 ? (
+        <Card className="p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <ShoppingBag className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+            Немає оголошень
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Створіть своє перше оголошення!
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {/* Products */}
+          {myListings.products.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-purple-500" />
+                  Товари ({myListings.products.length})
+                </h3>
+                <button
+                  onClick={() => onNavigate('products')}
+                  className="text-sm text-blue-600 dark:text-blue-400"
+                >
+                  Усі
+                </button>
+              </div>
+              <div className="space-y-2">
+                {myListings.products.slice(0, 3).map((item) => (
+                  <ListingCard key={item.id} item={item} type="product" />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Food */}
+          {myListings.food.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <UtensilsCrossed className="w-5 h-5 text-orange-500" />
+                  Їжа ({myListings.food.length})
+                </h3>
+                <button
+                  onClick={() => onNavigate('food')}
+                  className="text-sm text-blue-600 dark:text-blue-400"
+                >
+                  Усі
+                </button>
+              </div>
+              <div className="space-y-2">
+                {myListings.food.slice(0, 3).map((item) => (
+                  <ListingCard key={item.id} item={item} type="food" />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Rentals */}
+          {myListings.rentals.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-green-500" />
+                  Оренда ({myListings.rentals.length})
+                </h3>
+                <button
+                  onClick={() => onNavigate('rental')}
+                  className="text-sm text-blue-600 dark:text-blue-400"
+                >
+                  Усі
+                </button>
+              </div>
+              <div className="space-y-2">
+                {myListings.rentals.slice(0, 3).map((item) => (
+                  <ListingCard key={item.id} item={item} type="rental" />
+                ))}
+              </div>
+            </section>
           )}
         </div>
       )}
 
-      {/* Settings Tab */}
-      {activeTab === 'settings' && (
-        <div className="space-y-4">
-          <Card className="p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-              Контактна інформація
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MessageCircle className="w-5 h-5 text-blue-500" />
-                  <span className="text-gray-700 dark:text-gray-300">Telegram</span>
-                </div>
-                <span className="text-gray-500 dark:text-gray-400">
-                  {profile?.telegram_username ? `@${profile.telegram_username}` : '—'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-700 dark:text-gray-300">Телефон</span>
-                </div>
-                <span className="text-gray-500 dark:text-gray-400">
-                  {profile?.phone || 'Не вказано'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5 text-red-500" />
-                  <span className="text-gray-700 dark:text-gray-300">Місто</span>
-                </div>
-                <span className="text-gray-500 dark:text-gray-400">
-                  {profile?.city || 'Не вказано'}
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            Вийти з акаунту
-          </button>
-        </div>
-      )}
+      {/* Sign Out */}
+      <button
+        onClick={handleSignOut}
+        className="w-full flex items-center justify-center gap-2 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+      >
+        <LogOut className="w-5 h-5" />
+        Вийти з акаунту
+      </button>
 
       {/* Edit Profile Modal */}
       {editingProfile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 animate-fade-in">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 animate-fade-in">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
               Редагувати профіль
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Ім'я
                 </label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Телефон
                 </label>
                 <input
@@ -394,18 +465,18 @@ export function ProfilePage({ onNavigate }) {
                   value={editForm.phone}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                   placeholder="+32 xxx xx xx xx"
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Місто
                 </label>
                 <select
                   value={editForm.city}
                   onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="brussels">Брюссель</option>
                   <option value="antwerp">Антверпен</option>
@@ -413,6 +484,7 @@ export function ProfilePage({ onNavigate }) {
                   <option value="liege">Льєж</option>
                   <option value="charleroi">Шарлеруа</option>
                   <option value="bruges">Брюгге</option>
+                  <option value="leuven">Лювен</option>
                   <option value="other">Інше</option>
                 </select>
               </div>
@@ -421,13 +493,13 @@ export function ProfilePage({ onNavigate }) {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setEditingProfile(false)}
-                className="flex-1 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="flex-1 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Скасувати
               </button>
               <button
                 onClick={handleSaveProfile}
-                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
               >
                 Зберегти
               </button>
@@ -485,9 +557,6 @@ function ListingCard({ item, type }) {
           <div className="flex items-center gap-2 mb-1">
             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[item.status]}`}>
               {statusLabels[item.status]}
-            </span>
-            <span className="text-xs text-gray-400">
-              {item.type === 'offer' ? 'Пропоную' : 'Шукаю'}
             </span>
           </div>
           <h4 className="font-medium text-gray-900 dark:text-white truncate">
