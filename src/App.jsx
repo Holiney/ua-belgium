@@ -225,15 +225,15 @@ export default function App() {
         )}
 
         {page === 'products' && (
-          <ProductsPage />
+          <ProductsPage onNavigate={navigate} />
         )}
 
         {page === 'food' && (
-          <FoodPage />
+          <FoodPage onNavigate={navigate} />
         )}
 
         {page === 'rental' && (
-          <RentalPage />
+          <RentalPage onNavigate={navigate} />
         )}
 
         {page === 'favorites' && (

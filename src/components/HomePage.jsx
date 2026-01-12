@@ -1,8 +1,7 @@
 import { Card, SectionTitle } from './Layout';
-import { guideCategories, serviceCategories } from '../data/categories';
+import { guideCategories } from '../data/categories';
 import { mockNews } from '../data/news';
-import { upcomingTrips } from '../data/services';
-import { ChevronRight, BookOpen, Briefcase, Heart, Info, ShoppingBag, UtensilsCrossed, Building2, Pin, MessageCircle, Users, Package, Phone, AlertTriangle } from 'lucide-react';
+import { ChevronRight, BookOpen, Briefcase, Heart, Info, ShoppingBag, UtensilsCrossed, Building2, Pin, Phone } from 'lucide-react';
 
 // Emergency contacts data
 const emergencyContacts = [
@@ -12,7 +11,7 @@ const emergencyContacts = [
   { id: 'medical', name: 'Медична допомога', number: '1733', description: 'Лікар на черговості', icon: '🏥', color: 'green' },
 ];
 
-const APP_VERSION = 'v3.0';
+const APP_VERSION = 'v3.1';
 
 export function HomePage({ onNavigate }) {
   // Get latest 2 pinned or recent news
@@ -35,62 +34,21 @@ export function HomePage({ onNavigate }) {
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-yellow-400 rounded-3xl p-6 text-white shadow-lg">
-        <div className="flex items-start gap-4">
-          <div className="text-4xl">🇺🇦</div>
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Ласкаво просимо!</h1>
-            <p className="text-blue-100 text-sm leading-relaxed">
-              Ваш помічник для життя в Бельгії. Гайди, послуги, оголошення та перевезення.
-            </p>
+      <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-yellow-400 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute top-2 left-2 opacity-20 text-6xl">🇧🇪</div>
+        <div className="absolute bottom-2 right-2 opacity-20 text-6xl">🇺🇦</div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-2xl">🇧🇪</span>
+            <span className="text-lg">❤️</span>
+            <span className="text-2xl">🇺🇦</span>
           </div>
+          <h1 className="text-2xl font-bold mb-2">Ласкаво просимо!</h1>
+          <p className="text-blue-100 text-sm leading-relaxed">
+            Ваш помічник для життя в Бельгії. Гайди, послуги та оголошення для українців.
+          </p>
         </div>
       </div>
-
-      {/* Upcoming Trips Banner */}
-      <section>
-        <Card className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              🚐 Найближчі поїздки в Україну
-            </h3>
-            <button
-              onClick={() => onNavigate('services', { categoryFilter: 'transport' })}
-              className="text-sm text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"
-            >
-              Всі <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {upcomingTrips.map(trip => (
-              <a
-                key={trip.id}
-                href={`https://t.me/${trip.telegram.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{trip.day}</div>
-                    <div className="font-bold text-gray-900 dark:text-white">{trip.date.split(' ')[0]}</div>
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white text-sm">{trip.route}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                      {trip.driver}
-                      {trip.type === 'passengers' && <><Users className="w-3 h-3" /> {trip.seats} місць</>}
-                      {trip.type === 'parcels' && <><Package className="w-3 h-3" /> посилки</>}
-                      {trip.type === 'combined' && <><Users className="w-3 h-3" /> + <Package className="w-3 h-3" /></>}
-                    </div>
-                  </div>
-                </div>
-                <MessageCircle className="w-5 h-5 text-blue-500" />
-              </a>
-            ))}
-          </div>
-        </Card>
-      </section>
 
       {/* Latest News */}
       {latestNews.length > 0 && (
@@ -198,42 +156,6 @@ export function HomePage({ onNavigate }) {
               <div className="text-xs font-medium text-gray-700 dark:text-gray-300 leading-tight">
                 {category.name}
               </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Services Preview */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <SectionTitle className="mb-0">Послуги</SectionTitle>
-          <button
-            onClick={() => onNavigate('services')}
-            className="text-sm text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"
-          >
-            Усі <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="space-y-2">
-          {serviceCategories.slice(0, 4).map((category) => (
-            <Card
-              key={category.id}
-              className={`p-4 flex items-center gap-4 ${category.featured ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
-              onClick={() => onNavigate('services', { categoryFilter: category.id })}
-            >
-              <div className="text-2xl">{category.icon}</div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                  {category.name}
-                  {category.featured && (
-                    <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded">
-                      Hot
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{category.description}</div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
             </Card>
           ))}
         </div>
