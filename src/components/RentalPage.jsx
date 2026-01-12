@@ -4,6 +4,16 @@ import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
 
+// Get or create local user ID for anonymous users
+function getLocalUserId() {
+  let localId = loadFromStorage('local-user-id', null);
+  if (!localId) {
+    localId = 'local-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+    saveToStorage('local-user-id', localId);
+  }
+  return localId;
+}
+
 // Categories for rental
 export const categories = [
   { id: 'all', name: 'Все', icon: '🏠' },
@@ -235,6 +245,7 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
+    const userId = user?.id || getLocalUserId();
     const newRental = {
       id: editItem?.id || Date.now().toString(),
       title: formData.title,
@@ -252,8 +263,8 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
       },
       available: formData.available,
       images: formData.images,
-      createdAt: editItem?.createdAt || new Date(),
-      userId: user?.id,
+      createdAt: editItem?.createdAt || new Date().toISOString(),
+      userId: userId,
       isUserItem: true,
     };
 
@@ -702,7 +713,9 @@ export function RentalPage({ onNavigate }) {
   };
 
   const isOwner = (rental) => {
-    return rental.isUserItem && rental.userId === user?.id;
+    if (!rental.isUserItem) return false;
+    const currentUserId = user?.id || getLocalUserId();
+    return rental.userId === currentUserId;
   };
 
   return (

@@ -257,18 +257,31 @@ function ImageUpload({ images, onChange, maxImages = 5 }) {
   );
 }
 
+// Get or create local user ID for anonymous users
+function getLocalUserId() {
+  let localId = loadFromStorage('local-user-id', null);
+  if (!localId) {
+    localId = 'local-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+    saveToStorage('local-user-id', localId);
+  }
+  return localId;
+}
+
 // Add Product Form Component
 function AddProductForm({ onClose, onAdd, editItem = null }) {
   const { user, profile } = useAuth();
+  const localProfile = loadFromStorage('user-profile', {});
+  const currentProfile = profile || localProfile;
+
   const [formData, setFormData] = useState({
     title: editItem?.title || '',
     category: editItem?.category || 'electronics',
     price: editItem?.price?.toString() || '',
     condition: editItem?.condition || 'used',
-    city: editItem?.city || profile?.city || 'brussels',
+    city: editItem?.city || currentProfile?.city || 'brussels',
     description: editItem?.description || '',
-    phone: editItem?.contact?.phone || profile?.phone || '',
-    telegram: editItem?.contact?.telegram || profile?.telegram_username ? `@${profile.telegram_username}` : '',
+    phone: editItem?.contact?.phone || currentProfile?.phone || '',
+    telegram: editItem?.contact?.telegram || (currentProfile?.telegram_username ? `@${currentProfile.telegram_username}` : ''),
     isFree: editItem?.isFree || false,
     images: editItem?.images || [],
   });
@@ -276,6 +289,8 @@ function AddProductForm({ onClose, onAdd, editItem = null }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
+
+    const userId = user?.id || getLocalUserId();
 
     const newProduct = {
       id: editItem?.id || Date.now().toString(),
@@ -291,8 +306,8 @@ function AddProductForm({ onClose, onAdd, editItem = null }) {
       },
       images: formData.images,
       isFree: formData.isFree,
-      createdAt: editItem?.createdAt || new Date(),
-      userId: user?.id,
+      createdAt: editItem?.createdAt || new Date().toISOString(),
+      userId: userId,
       isUserItem: true,
     };
 
@@ -695,7 +710,9 @@ export function ProductsPage({ onNavigate }) {
   };
 
   const isOwner = (product) => {
-    return product.isUserItem && product.userId === user?.id;
+    if (!product.isUserItem) return false;
+    const currentUserId = user?.id || getLocalUserId();
+    return product.userId === currentUserId;
   };
 
   return (
