@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Clock, Image, ChevronLeft, ChevronRight, Trash2, Edit2, LogIn } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
@@ -168,18 +168,22 @@ export const mockFoodItems = [
 function ImageUpload({ images, onChange, maxImages = 5 }) {
   const inputRef = useRef(null);
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     const remainingSlots = maxImages - images.length;
     const filesToProcess = files.slice(0, remainingSlots);
 
-    filesToProcess.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        onChange([...images, e.target.result]);
-      };
-      reader.readAsDataURL(file);
-    });
+    // Read all files first, then update state once
+    const readFile = (file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    };
+
+    const newImages = await Promise.all(filesToProcess.map(readFile));
+    onChange([...images, ...newImages]);
 
     e.target.value = '';
   };
@@ -611,6 +615,16 @@ export function FoodPage({ onNavigate }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [userItems, setUserItems] = useState(() => loadFromStorage('food-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('food-favorites', []));
+
+  // Check for item to edit from profile page
+  useEffect(() => {
+    const editingData = loadFromStorage('editing-item', null);
+    if (editingData && editingData.type === 'food' && editingData.item) {
+      setEditingItem(editingData.item);
+      setShowAddForm(true);
+      saveToStorage('editing-item', null); // Clear after use
+    }
+  }, []);
 
   const allItems = [...userItems, ...mockFoodItems].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)

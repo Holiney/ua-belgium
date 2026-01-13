@@ -1,7 +1,7 @@
 import { Card, SectionTitle } from './Layout';
 import { guideCategories } from '../data/categories';
 import { mockNews } from '../data/news';
-import { ChevronRight, BookOpen, Briefcase, Heart, Info, ShoppingBag, UtensilsCrossed, Building2, Pin, Phone } from 'lucide-react';
+import { ChevronRight, BookOpen, Briefcase, Heart, Info, Pin } from 'lucide-react';
 
 // Emergency contacts data
 const emergencyContacts = [
@@ -89,36 +89,6 @@ export function HomePage({ onNavigate }) {
           </div>
         </section>
       )}
-
-      {/* Quick Access - Main Sections */}
-      <section>
-        <SectionTitle>Дошка оголошень</SectionTitle>
-        <div className="grid grid-cols-3 gap-3">
-          <Card
-            className="p-4 text-center"
-            onClick={() => onNavigate('products')}
-          >
-            <ShoppingBag className="w-8 h-8 mx-auto mb-2 text-purple-500" />
-            <div className="font-medium text-gray-900 dark:text-white text-sm">Товари</div>
-          </Card>
-
-          <Card
-            className="p-4 text-center"
-            onClick={() => onNavigate('food')}
-          >
-            <UtensilsCrossed className="w-8 h-8 mx-auto mb-2 text-orange-500" />
-            <div className="font-medium text-gray-900 dark:text-white text-sm">Їжа</div>
-          </Card>
-
-          <Card
-            className="p-4 text-center"
-            onClick={() => onNavigate('rental')}
-          >
-            <Building2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
-            <div className="font-medium text-gray-900 dark:text-white text-sm">Оренда</div>
-          </Card>
-        </div>
-      </section>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3">
