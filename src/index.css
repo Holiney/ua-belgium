@@ -18,14 +18,6 @@
     --accent-foreground: 210 100% 30%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
-    --task1-accent: 217.2 91.2% 59.8%;
-    --task2-accent: 30.5 73.5% 53.3%;
-    --task3-accent: 284.1 63.3% 40.8%;
-    --history-accent: 240 5.9% 90%;
-    --select-item-hover-background: 220 14% 92%;
-    --select-item-hover-foreground: 220 14% 20%;
-    --select-item-selected-background: 220 14% 85%;
-    --select-item-selected-foreground: 220 14% 20%;
   }
 
   .dark {
@@ -45,56 +37,13 @@
     --accent-foreground: 210 100% 70%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
-    --task1-accent: 217.2 91.2% 59.8%;
-    --task2-accent: 30.5 73.5% 53.3%;
-    --task3-accent: 284.1 63.3% 40.8%;
-    --history-accent: 240 5.9% 90%;
-    --select-item-hover-background: 220 14% 20%;
-    --select-item-hover-foreground: 220 14% 95%;
-    --select-item-selected-background: 220 14% 25%;
-    --select-item-selected-foreground: 220 14% 95%;
-  }
-  
-  .purple {
-    /* Custom Theme Palette based on the image */
-    --background-start: 246 39% 19%;
-    --background-end: 285 53% 26%;
-    --foreground: 0 0% 98%;
-    
-    --card: 260 25% 25%;
-    --card-foreground: 0 0% 98%;
-    
-    --muted: 260 25% 30%;
-    --muted-foreground: 0 0% 70%;
-    
-    --border: 260 25% 35%;
-    
-    --primary: 290 60% 55%; /* A vibrant purple-pink for primary actions */
-    --primary-foreground: 0 0% 98%;
-    
-    --secondary: 260 25% 35%;
-    --secondary-foreground: 0 0% 90%;
-    
-    --accent: 275 70% 65%;
-    --accent-foreground: 0 0% 98%;
-    
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-    
-    --task1-accent: 217.2 91.2% 59.8%;
-    --task2-accent: 30.5 73.5% 53.3%;
-    --task3-accent: 284.1 63.3% 40.8%;
-    --history-accent: 240 5.9% 90%;
-    --select-item-hover-background: 260 25% 30%;
-    --select-item-hover-foreground: 0 0% 98%;
-    --select-item-selected-background: 260 25% 35%;
-    --select-item-selected-foreground: 0 0% 98%;
   }
 }
+
+/* Ensure dark mode works with Tailwind 4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 body {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
-}
-.purple body {
-  background: linear-gradient(135deg, hsl(var(--background-start)) 0%, hsl(var(--background-end)) 100%);
 }

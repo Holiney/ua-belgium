@@ -121,6 +121,14 @@ export function ProfilePage({ onNavigate }) {
     loadMyListings();
   };
 
+  const handleEditListing = (type, item) => {
+    // Save item to edit in localStorage so the page can pick it up
+    saveToStorage('editing-item', { type, item });
+    // Navigate to the appropriate page
+    const pageMap = { products: 'products', food: 'food', rental: 'rental' };
+    onNavigate(pageMap[type] || type);
+  };
+
   const totalListings = myListings.products.length + myListings.food.length + myListings.rentals.length;
   const currentProfile = profile || localProfile;
 
@@ -394,6 +402,7 @@ export function ProfilePage({ onNavigate }) {
                     type="products"
                     icon={<ShoppingBag className="w-4 h-4 text-purple-500" />}
                     onDelete={() => handleDeleteListing('products', item.id)}
+                    onEdit={() => handleEditListing('products', item)}
                   />
                 ))}
               </div>
@@ -413,6 +422,7 @@ export function ProfilePage({ onNavigate }) {
                     type="food"
                     icon={<UtensilsCrossed className="w-4 h-4 text-orange-500" />}
                     onDelete={() => handleDeleteListing('food', item.id)}
+                    onEdit={() => handleEditListing('food', item)}
                   />
                 ))}
               </div>
@@ -432,6 +442,7 @@ export function ProfilePage({ onNavigate }) {
                     type="rental"
                     icon={<Building2 className="w-4 h-4 text-green-500" />}
                     onDelete={() => handleDeleteListing('rental', item.id)}
+                    onEdit={() => handleEditListing('rental', item)}
                   />
                 ))}
               </div>
@@ -476,13 +487,23 @@ export function ProfilePage({ onNavigate }) {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Телефон
                 </label>
-                <input
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  placeholder="+32 xxx xx xx xx"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    disabled
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <span className="text-xs text-green-500 flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Підтверджено
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Номер телефону не можна змінити
+                </p>
               </div>
 
               <div>
@@ -535,7 +556,7 @@ export function ProfilePage({ onNavigate }) {
 }
 
 // Listing card component
-function ListingCard({ item, type, icon, onDelete }) {
+function ListingCard({ item, type, icon, onDelete, onEdit }) {
   const formatDate = (date) => {
     if (!date) return '';
     const d = date instanceof Date ? date : new Date(date);
@@ -574,12 +595,20 @@ function ListingCard({ item, type, icon, onDelete }) {
           </div>
         </div>
 
-        <button
-          onClick={onDelete}
-          className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onEdit}
+            className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-500 transition-colors"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </Card>
   );
