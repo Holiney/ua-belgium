@@ -557,7 +557,11 @@ export function ProfilePage({ onNavigate }) {
                 Скасувати
               </button>
               <button
-                onClick={handleSaveProfile}
+                type="button"
+                onClick={() => {
+                  console.log('Save button clicked!');
+                  handleSaveProfile();
+                }}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
               >
                 Зберегти
