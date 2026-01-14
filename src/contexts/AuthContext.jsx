@@ -67,23 +67,33 @@ export function AuthProvider({ children }) {
 
   // Send OTP to phone number
   const sendOtp = async (phone) => {
+    console.log('=== SEND OTP START ===');
+    console.log('isBackendReady:', isBackendReady);
+    console.log('supabase client exists:', !!supabase);
+    console.log('Phone:', phone);
+
     if (!isBackendReady || !supabase) {
+      console.error('Backend not ready!');
       return { error: new Error('Backend not configured') };
     }
 
     try {
-      console.log('Sending OTP to:', phone);
+      console.log('Calling supabase.auth.signInWithOtp...');
 
       const { data, error } = await supabase.auth.signInWithOtp({
         phone: phone,
       });
+
+      console.log('signInWithOtp response:');
+      console.log('- data:', data);
+      console.log('- error:', error);
 
       if (error) {
         console.error('Send OTP error:', error);
         return { error };
       }
 
-      console.log('OTP sent successfully');
+      console.log('OTP sent successfully!');
       return { data, error: null };
     } catch (error) {
       console.error('Send OTP exception:', error);
@@ -93,12 +103,17 @@ export function AuthProvider({ children }) {
 
   // Verify OTP code
   const verifyOtp = async (phone, token) => {
+    console.log('=== VERIFY OTP START ===');
+    console.log('Phone:', phone);
+    console.log('Token:', token);
+
     if (!isBackendReady || !supabase) {
+      console.error('Backend not ready!');
       return { error: new Error('Backend not configured') };
     }
 
     try {
-      console.log('Verifying OTP for:', phone);
+      console.log('Calling supabase.auth.verifyOtp...');
 
       const { data, error } = await supabase.auth.verifyOtp({
         phone: phone,
@@ -106,24 +121,37 @@ export function AuthProvider({ children }) {
         type: 'sms',
       });
 
+      console.log('verifyOtp response:');
+      console.log('- data:', data);
+      console.log('- error:', error);
+
       if (error) {
         console.error('Verify OTP error:', error);
         return { error };
       }
 
-      console.log('OTP verified successfully:', data);
+      console.log('OTP verified successfully!');
+      console.log('User:', data.user);
 
       // Create/update profile after successful auth
       if (data.user) {
+        console.log('Creating/updating profile...');
         const profileData = {
           id: data.user.id,
           phone: phone,
           name: data.user.user_metadata?.name || 'Користувач',
         };
+        console.log('Profile data:', profileData);
 
-        await supabase
+        const { data: profileResult, error: profileError } = await supabase
           .from('profiles')
-          .upsert(profileData, { onConflict: 'id' });
+          .upsert(profileData, { onConflict: 'id' })
+          .select();
+
+        console.log('Profile upsert result:', profileResult);
+        if (profileError) {
+          console.error('Profile upsert error:', profileError);
+        }
 
         await loadProfile(data.user.id);
       }
