@@ -198,20 +198,37 @@ export function AuthProvider({ children }) {
   };
 
   const updateProfile = async (updates) => {
-    if (!user) return { error: new Error('Not authenticated') };
-    if (!isBackendReady || !supabase) return { error: new Error('Backend not configured') };
+    console.log('updateProfile called with:', updates);
+    console.log('Current user:', user);
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id)
-      .select()
-      .single();
-
-    if (!error && data) {
-      setProfile(data);
+    if (!user) {
+      console.error('No user found');
+      return { error: new Error('Not authenticated') };
     }
-    return { data, error };
+    if (!isBackendReady || !supabase) {
+      console.error('Backend not ready');
+      return { error: new Error('Backend not configured') };
+    }
+
+    try {
+      console.log('Updating profile for user:', user.id);
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      console.log('Update result:', { data, error });
+
+      if (!error && data) {
+        setProfile(data);
+      }
+      return { data, error };
+    } catch (err) {
+      console.error('Update profile exception:', err);
+      return { error: err };
+    }
   };
 
   const value = {
