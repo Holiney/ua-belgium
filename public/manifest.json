@@ -5,12 +5,18 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
-  "theme_color": "#3b82f6",
+  "theme_color": "#0057B8",
   "orientation": "portrait",
   "categories": ["lifestyle", "reference", "social"],
   "lang": "uk",
   "scope": "/",
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/pwa-192.png",
       "sizes": "192x192",
@@ -30,14 +36,14 @@
       "short_name": "Гайди",
       "description": "Корисні гайди для життя в Бельгії",
       "url": "/?page=guides",
-      "icons": [{"src": "/pwa-192.png", "sizes": "192x192"}]
+      "icons": [{"src": "/favicon.svg", "sizes": "any"}]
     },
     {
       "name": "Каталог послуг",
       "short_name": "Послуги",
       "description": "Українські спеціалісти в Бельгії",
       "url": "/?page=services",
-      "icons": [{"src": "/pwa-192.png", "sizes": "192x192"}]
+      "icons": [{"src": "/favicon.svg", "sizes": "any"}]
     }
   ]
 }

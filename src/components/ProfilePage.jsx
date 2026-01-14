@@ -86,11 +86,20 @@ export function ProfilePage({ onNavigate }) {
 
   const handleSignOut = async () => {
     if (confirm('Ви впевнені, що хочете вийти?')) {
+      // Sign out from Supabase if backend ready
       await signOut();
-      // Clear local data
+      // Clear ALL local data related to account
       saveToStorage('local-user-id', null);
       saveToStorage('user-profile', null);
+      saveToStorage('products-items', []);
+      saveToStorage('food-items', []);
+      saveToStorage('rental-items', []);
+      saveToStorage('editing-item', null);
+      // Clear local state
       setLocalProfile(null);
+      setMyListings({ products: [], food: [], rentals: [] });
+      // Force reload to reset everything
+      window.location.reload();
     }
   };
 

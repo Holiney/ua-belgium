@@ -1,7 +1,7 @@
 import { Card, SectionTitle } from './Layout';
 import { guideCategories } from '../data/categories';
 import { articles } from '../data/articles';
-import { ChevronRight, FileText } from 'lucide-react';
+import { ChevronRight, FileText, ExternalLink } from 'lucide-react';
 
 export function GuidesPage({ onNavigate }) {
   return (
@@ -174,6 +174,33 @@ export function ArticlePage({ articleId, onBack }) {
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   {tip}
                 </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* Links */}
+      {article.links && article.links.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">🔗</span> Корисні посилання
+          </h2>
+          <ul className="space-y-3">
+            {article.links.map((link, index) => (
+              <li key={index}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group"
+                >
+                  <ExternalLink className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <span className="text-blue-600 dark:text-blue-400 group-hover:underline flex-1">
+                    {link.title}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-blue-400 opacity-50" />
+                </a>
               </li>
             ))}
           </ul>

@@ -1,7 +1,7 @@
 import { Card, SectionTitle } from './Layout';
 import { guideCategories } from '../data/categories';
 import { mockNews } from '../data/news';
-import { ChevronRight, BookOpen, Briefcase, Heart, Info, Pin } from 'lucide-react';
+import { ChevronRight, Heart, Info, Pin } from 'lucide-react';
 
 // Emergency contacts data
 const emergencyContacts = [
@@ -89,20 +89,6 @@ export function HomePage({ onNavigate }) {
           </div>
         </section>
       )}
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4 text-center" onClick={() => onNavigate('guides')}>
-          <BookOpen className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">15+</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Корисних гайдів</div>
-        </Card>
-        <Card className="p-4 text-center" onClick={() => onNavigate('services')}>
-          <Briefcase className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">35+</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Спеціалістів</div>
-        </Card>
-      </div>
 
       {/* Guide Categories Preview */}
       <section>

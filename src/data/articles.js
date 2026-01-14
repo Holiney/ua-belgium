@@ -18,6 +18,9 @@ export const articles = [
       'Запитайте про Global Medical File (GMD) для знижок на візити',
       'Зберігайте всі чеки для відшкодування через mutualité',
     ],
+    links: [
+      { title: 'Пошук лікаря на 1733.be', url: 'https://www.1733.be/' },
+    ],
   },
   {
     id: 'med-2',
@@ -36,6 +39,12 @@ export const articles = [
       'Mutualité також надає додаткові послуги: стоматологія, окуляри, спорт',
       'Порівняйте пропозиції різних mutualité перед вибором',
     ],
+    links: [
+      { title: 'CM (Christelijke Mutualiteit)', url: 'https://www.cm.be/' },
+      { title: 'Solidaris', url: 'https://www.solidaris.be/' },
+      { title: 'Partena Ziekenfonds', url: 'https://www.partena-ziekenfonds.be/' },
+      { title: 'Helan', url: 'https://www.helan.be/' },
+    ],
   },
   {
     id: 'med-3',
@@ -53,6 +62,10 @@ export const articles = [
       'У смартфоні збережіть номер найближчої лікарні',
       'Встановіть додаток 112 BE для швидкого виклику допомоги',
       'Аптеки чергують по ночах — адреси на apotheek.be',
+    ],
+    links: [
+      { title: 'Додаток 112 BE', url: 'https://www.112.be/en/app' },
+      { title: 'Пошук чергової аптеки', url: 'https://www.apotheek.be/' },
     ],
   },
 
@@ -75,6 +88,9 @@ export const articles = [
       'Зберігайте копії всіх документів',
       'Запитайте про соціальну допомогу (leefloon) при реєстрації',
     ],
+    links: [
+      { title: 'Пошук комуни за поштовим індексом', url: 'https://www.belgium.be/en/about_belgium/government/municipalities' },
+    ],
   },
   {
     id: 'doc-2',
@@ -94,6 +110,10 @@ export const articles = [
       'З A-картою можна працювати без додаткового дозволу',
       'Карта потрібна для відкриття банківського рахунку',
     ],
+    links: [
+      { title: 'Форма продовження А-карти (DVZ)', url: 'https://dofi.ibz.be/en/themes/ukraine/temporary-protection' },
+      { title: 'Інформація про тимчасовий захист', url: 'https://info-ukraine.be/en/protection-belgium' },
+    ],
   },
   {
     id: 'doc-3',
@@ -112,6 +132,9 @@ export const articles = [
       'Перевірте актуальні правила — вони можуть змінюватися',
       'Для деяких категорій може знадобитися екзамен',
       'Бельгійські права дійсні по всьому ЄС',
+    ],
+    links: [
+      { title: 'Інформація про водійські права (Фландрія)', url: 'https://www.vlaanderen.be/rijbewijs' },
     ],
   },
 
@@ -134,6 +157,10 @@ export const articles = [
       'Запитайте про енергетичний сертифікат (EPC)',
       'Українські волонтерські організації допомагають з пошуком житла',
     ],
+    links: [
+      { title: 'Immoweb - пошук житла', url: 'https://www.immoweb.be/' },
+      { title: 'Zimmo - оголошення оренди', url: 'https://www.zimmo.be/' },
+    ],
   },
   {
     id: 'house-2',
@@ -152,6 +179,11 @@ export const articles = [
       'Соціальний тариф доступний для осіб з тимчасовим захистом',
       'Запитайте власника, чи включені комунальні в оренду',
       'Зберігайте всі рахунки та платежі',
+    ],
+    links: [
+      { title: 'Порівняння тарифів енергії', url: 'https://www.comparateur-energie.be/' },
+      { title: 'Proximus (інтернет)', url: 'https://www.proximus.be/' },
+      { title: 'Telenet (інтернет)', url: 'https://www.telenet.be/' },
     ],
   },
 
@@ -174,6 +206,13 @@ export const articles = [
       'Агентства тимчасового працевлаштування: Randstad, Adecco, Manpower',
       'Мережа контактів важлива — відвідуйте нетворкінг-заходи',
     ],
+    links: [
+      { title: 'VDAB (Фландрія)', url: 'https://www.vdab.be/' },
+      { title: 'Actiris (Брюссель)', url: 'https://www.actiris.brussels/' },
+      { title: 'Forem (Валлонія)', url: 'https://www.leforem.be/' },
+      { title: 'Indeed Belgium', url: 'https://be.indeed.com/' },
+      { title: 'StepStone Belgium', url: 'https://www.stepstone.be/' },
+    ],
   },
   {
     id: 'work-2',
@@ -192,6 +231,10 @@ export const articles = [
       'Мінімальні соціальні внески ~€800/квартал',
       'Зверніться до бухгалтера для правильного старту',
       'Є пільги для стартапів перші роки',
+    ],
+    links: [
+      { title: 'Реєстрація підприємства (KBO)', url: 'https://kbopub.economie.fgov.be/' },
+      { title: 'Acerta (соціальний фонд)', url: 'https://www.acerta.be/' },
     ],
   },
 
@@ -214,6 +257,11 @@ export const articles = [
       'Школи можуть мати черги — записуйтеся заздалегідь',
       'Є спеціальні класи для дітей без знання мови (OKAN у Фландрії)',
     ],
+    links: [
+      { title: 'Onderwijs Vlaanderen (освіта Фландрія)', url: 'https://onderwijs.vlaanderen.be/' },
+      { title: 'Enseignement.be (освіта Валлонія)', url: 'http://www.enseignement.be/' },
+      { title: 'Інформація про OKAN', url: 'https://onderwijs.vlaanderen.be/nl/okan' },
+    ],
   },
   {
     id: 'child-2',
@@ -231,6 +279,11 @@ export const articles = [
       'Базова виплата ~€170/місяць на дитину (Фландрія)',
       'Додаткові виплати на початок шкільного року',
       'Виплати продовжуються до 25 років при навчанні',
+    ],
+    links: [
+      { title: 'Groeipakket (офіційний сайт)', url: 'https://www.groeipakket.be/' },
+      { title: 'Fons (виплатне агентство)', url: 'https://www.fons.be/' },
+      { title: 'KidsLife', url: 'https://www.kidslife.be/' },
     ],
   },
 
@@ -253,6 +306,12 @@ export const articles = [
       'Діти до 6 років їздять безкоштовно',
       'Велосипеди: Blue-bike, Velo (Антверпен), Billy Bike',
     ],
+    links: [
+      { title: 'De Lijn (Фландрія)', url: 'https://www.delijn.be/' },
+      { title: 'STIB/MIVB (Брюссель)', url: 'https://www.stib-mivb.be/' },
+      { title: 'TEC (Валлонія)', url: 'https://www.letec.be/' },
+      { title: 'NMBS/SNCB (потяги)', url: 'https://www.belgiantrain.be/' },
+    ],
   },
   {
     id: 'daily-2',
@@ -269,8 +328,14 @@ export const articles = [
     ],
     tips: [
       'Базовий рахунок безкоштовний для осіб з низьким доходом',
-      'Більшість операцій робіться через додаток',
+      'Більшість операцій робиться через додаток',
       'Для Payconiq потрібен бельгійський номер телефону',
+    ],
+    links: [
+      { title: 'KBC', url: 'https://www.kbc.be/' },
+      { title: 'BNP Paribas Fortis', url: 'https://www.bnpparibasfortis.be/' },
+      { title: 'ING Belgium', url: 'https://www.ing.be/' },
+      { title: 'Belfius', url: 'https://www.belfius.be/' },
     ],
   },
   {
@@ -290,6 +355,11 @@ export const articles = [
       'Too Good To Go — їжа зі знижкою до 70%',
       'Знижки на продукти з коротким терміном (-30% -50%)',
       'Магазини закриті в неділю (окрім деяких у центрі)',
+    ],
+    links: [
+      { title: 'Colruyt', url: 'https://www.colruyt.be/' },
+      { title: 'Delhaize', url: 'https://www.delhaize.be/' },
+      { title: 'Too Good To Go', url: 'https://www.toogoodtogo.com/nl-BE' },
     ],
   },
 ];
