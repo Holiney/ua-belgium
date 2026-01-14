@@ -104,11 +104,23 @@ export function ProfilePage({ onNavigate }) {
   };
 
   const handleSaveProfile = async () => {
+    console.log('Saving profile...', editForm);
+
     // Save to Supabase if available
     if (isBackendReady && user) {
-      const { error } = await updateProfile(editForm);
+      // Only send name and city (phone cannot be changed)
+      const updateData = {
+        name: editForm.name,
+        city: editForm.city,
+      };
+      console.log('Updating Supabase with:', updateData);
+
+      const { data, error } = await updateProfile(updateData);
+      console.log('Supabase response:', { data, error });
+
       if (error) {
-        alert('Помилка збереження профілю');
+        console.error('Profile update error:', error);
+        alert('Помилка збереження: ' + (error.message || 'Невідома помилка'));
         return;
       }
     }
@@ -118,6 +130,7 @@ export function ProfilePage({ onNavigate }) {
     saveToStorage('user-profile', updatedProfile);
     setLocalProfile(updatedProfile);
     setEditingProfile(false);
+    console.log('Profile saved successfully');
   };
 
   const handleDeleteListing = (type, itemId) => {
@@ -544,7 +557,11 @@ export function ProfilePage({ onNavigate }) {
                 Скасувати
               </button>
               <button
-                onClick={handleSaveProfile}
+                type="button"
+                onClick={() => {
+                  console.log('Save button clicked!');
+                  handleSaveProfile();
+                }}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
               >
                 Зберегти
