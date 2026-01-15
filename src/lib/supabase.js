@@ -25,14 +25,43 @@ export const signOut = async () => {
 
 // Database helpers for listings
 export const getListings = async (table, filters = {}) => {
-  console.log('getListings called for table:', table, 'filters:', filters);
+  console.log('=== getListings START ===');
+  console.log('Table:', table);
+  console.log('Filters:', filters);
+  console.log('Supabase client exists:', !!supabase);
+
+  if (!supabase) {
+    console.error('Supabase client is null!');
+    return { data: [], error: new Error('Supabase not configured') };
+  }
 
   try {
+    // First, try to get ALL records without any filters to diagnose
+    console.log('Fetching ALL records from', table, '(no filters for debug)...');
+    const { data: allData, error: allError } = await supabase
+      .from(table)
+      .select('*');
+
+    console.log('ALL records result:', {
+      count: allData?.length,
+      error: allError,
+      statuses: allData?.map(r => r.status),
+      firstRecord: allData?.[0]
+    });
+
+    // Now apply filters
     let query = supabase
       .from(table)
       .select('*')
-      .eq('status', 'active')
       .order('created_at', { ascending: false });
+
+    // Only filter by status if explicitly requested or default to active
+    if (filters.status !== undefined) {
+      query = query.eq('status', filters.status);
+    } else if (filters.includeAll !== true) {
+      // Default: filter by active status
+      query = query.eq('status', 'active');
+    }
 
     if (filters.category && filters.category !== 'all') {
       query = query.eq('category', filters.category);
@@ -48,11 +77,12 @@ export const getListings = async (table, filters = {}) => {
     }
 
     const { data, error } = await query;
-    console.log('getListings result for', table, ':', { data, error, count: data?.length });
-    return { data, error };
+    console.log('Filtered result for', table, ':', { data, error, count: data?.length });
+    console.log('=== getListings END ===');
+    return { data: data || [], error };
   } catch (err) {
     console.error('getListings exception:', err);
-    return { data: null, error: err };
+    return { data: [], error: err };
   }
 };
 
