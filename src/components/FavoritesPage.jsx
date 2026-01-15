@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, ShoppingBag, UtensilsCrossed, Building2, Phone, MessageCircle, MapPin, Home, Clock, Calendar, Gift } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
+import { supabase, isBackendReady, getListings } from '../lib/supabase';
 
-// Import data from page components
-import { mockProducts, categories as productCategories, cities as productCities } from './ProductsPage';
-import { mockFoodItems, categories as foodCategories, cities as foodCities } from './FoodPage';
-import { mockRentals, categories as rentalCategories, cities as rentalCities } from './RentalPage';
+// Import categories and cities from page components
+import { categories as productCategories, cities as productCities } from './ProductsPage';
+import { categories as foodCategories, cities as foodCities } from './FoodPage';
+import { categories as rentalCategories, cities as rentalCities } from './RentalPage';
 
 // Tab config
 const tabs = [
@@ -22,6 +23,11 @@ function ProductCard({ item, onRemove }) {
   const category = productCategories?.find(c => c.id === item.category);
   const city = productCities?.find(c => c.id === item.city);
   const isLooking = item.listingType === 'looking';
+
+  // Handle both local and Supabase data formats
+  const isFree = item.isFree || item.is_free;
+  const contactPhone = item.contact?.phone || item.contact_phone;
+  const contactTelegram = item.contact?.telegram || item.contact_telegram;
 
   return (
     <Card className={`overflow-hidden ${isLooking ? 'border-l-4 border-l-purple-500' : ''}`}>
@@ -50,7 +56,7 @@ function ProductCard({ item, onRemove }) {
         </div>
 
         <div className="flex items-center gap-2 mb-2">
-          {item.isFree ? (
+          {isFree ? (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium">
               <Gift className="w-4 h-4" />
               Безкоштовно
@@ -78,16 +84,16 @@ function ProductCard({ item, onRemove }) {
 
         {showContacts && (
           <div className="mt-3 pt-3 border-t dark:border-gray-700 space-y-2">
-            {item.contact?.phone && (
-              <a href={`tel:${item.contact.phone}`} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
+            {contactPhone && (
+              <a href={`tel:${contactPhone}`} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
                 <Phone className="w-4 h-4" />
-                {item.contact.phone}
+                {contactPhone}
               </a>
             )}
-            {item.contact?.telegram && (
-              <a href={`https://t.me/${item.contact.telegram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
+            {contactTelegram && (
+              <a href={`https://t.me/${contactTelegram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
                 <MessageCircle className="w-4 h-4" />
-                {item.contact.telegram}
+                {contactTelegram}
               </a>
             )}
           </div>
@@ -102,6 +108,10 @@ function FoodCard({ item, onRemove }) {
   const [showContacts, setShowContacts] = useState(false);
   const city = foodCities?.find(c => c.id === item.city);
   const isLooking = item.listingType === 'looking';
+
+  // Handle both local and Supabase data formats
+  const contactPhone = item.contact?.phone || item.contact_phone;
+  const contactTelegram = item.contact?.telegram || item.contact_telegram;
 
   return (
     <Card className={`overflow-hidden ${isLooking ? 'border-l-4 border-l-purple-500' : ''}`}>
@@ -155,16 +165,16 @@ function FoodCard({ item, onRemove }) {
 
         {showContacts && (
           <div className="mt-3 pt-3 border-t dark:border-gray-700 space-y-2">
-            {item.contact?.phone && (
-              <a href={`tel:${item.contact.phone}`} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
+            {contactPhone && (
+              <a href={`tel:${contactPhone}`} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
                 <Phone className="w-4 h-4" />
-                {item.contact.phone}
+                {contactPhone}
               </a>
             )}
-            {item.contact?.telegram && (
-              <a href={`https://t.me/${item.contact.telegram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
+            {contactTelegram && (
+              <a href={`https://t.me/${contactTelegram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
                 <MessageCircle className="w-4 h-4" />
-                {item.contact.telegram}
+                {contactTelegram}
               </a>
             )}
           </div>
@@ -179,6 +189,10 @@ function RentalCard({ item, onRemove }) {
   const [showContacts, setShowContacts] = useState(false);
   const city = rentalCities?.find(c => c.id === item.city);
   const isLooking = item.listingType === 'looking';
+
+  // Handle both local and Supabase data formats
+  const contactPhone = item.contact?.phone || item.contact_phone;
+  const contactTelegram = item.contact?.telegram || item.contact_telegram;
 
   const priceLabel = {
     month: '/міс',
@@ -211,10 +225,12 @@ function RentalCard({ item, onRemove }) {
             {isLooking ? 'до ' : ''}€{item.price}
             <span className="text-sm font-normal text-gray-500">{priceLabel[item.priceType]}</span>
           </span>
-          <span className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-            <Home className="w-3.5 h-3.5" />
-            {item.rooms} {item.rooms === 1 ? 'кімната' : item.rooms < 5 ? 'кімнати' : 'кімнат'}
-          </span>
+          {item.rooms && (
+            <span className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+              <Home className="w-3.5 h-3.5" />
+              {item.rooms} {item.rooms === 1 ? 'кімната' : item.rooms < 5 ? 'кімнати' : 'кімнат'}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -238,16 +254,16 @@ function RentalCard({ item, onRemove }) {
 
         {showContacts && (
           <div className="mt-3 pt-3 border-t dark:border-gray-700 space-y-2">
-            {item.contact?.phone && (
-              <a href={`tel:${item.contact.phone}`} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
+            {contactPhone && (
+              <a href={`tel:${contactPhone}`} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
                 <Phone className="w-4 h-4" />
-                {item.contact.phone}
+                {contactPhone}
               </a>
             )}
-            {item.contact?.telegram && (
-              <a href={`https://t.me/${item.contact.telegram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
+            {contactTelegram && (
+              <a href={`https://t.me/${contactTelegram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
                 <MessageCircle className="w-4 h-4" />
-                {item.contact.telegram}
+                {contactTelegram}
               </a>
             )}
           </div>
@@ -264,15 +280,42 @@ export function FavoritesPage() {
   const [foodFavorites, setFoodFavorites] = useState(() => loadFromStorage('food-favorites', []));
   const [rentalFavorites, setRentalFavorites] = useState(() => loadFromStorage('rental-favorites', []));
 
-  // Get user items from storage
-  const userProducts = loadFromStorage('products-items', []);
-  const userFoodItems = loadFromStorage('food-items', []);
-  const userRentals = loadFromStorage('rental-items', []);
+  // State for loaded data
+  const [allProducts, setAllProducts] = useState([]);
+  const [allFoodItems, setAllFoodItems] = useState([]);
+  const [allRentals, setAllRentals] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Combine mock and user data
-  const allProducts = [...userProducts, ...(mockProducts || [])];
-  const allFoodItems = [...userFoodItems, ...(mockFoodItems || [])];
-  const allRentals = [...userRentals, ...(mockRentals || [])];
+  // Load data from Supabase or localStorage
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        if (isBackendReady && supabase) {
+          const [productsRes, foodRes, rentalsRes] = await Promise.all([
+            getListings('products'),
+            getListings('food'),
+            getListings('rentals'),
+          ]);
+          setAllProducts(productsRes.data || []);
+          setAllFoodItems(foodRes.data || []);
+          setAllRentals(rentalsRes.data || []);
+        } else {
+          setAllProducts(loadFromStorage('products-items', []));
+          setAllFoodItems(loadFromStorage('food-items', []));
+          setAllRentals(loadFromStorage('rental-items', []));
+        }
+      } catch (err) {
+        console.error('Error loading favorites data:', err);
+        setAllProducts(loadFromStorage('products-items', []));
+        setAllFoodItems(loadFromStorage('food-items', []));
+        setAllRentals(loadFromStorage('rental-items', []));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   // Get favorite items
   const favoriteProducts = allProducts.filter(item => productFavorites.includes(item.id));
