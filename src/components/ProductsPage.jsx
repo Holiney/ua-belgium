@@ -652,45 +652,54 @@ export function ProductsPage({ onNavigate }) {
 
   const handleAddProduct = async (product) => {
     console.log('Adding/updating product:', product);
+    console.log('isBackendReady:', isBackendReady, 'supabase:', !!supabase, 'user:', user);
 
     if (isBackendReady && supabase && user) {
-      // Prepare data for Supabase
-      const supabaseData = {
-        user_id: user.id,
-        title: product.title,
-        description: product.description,
-        price: product.price || 0,
-        is_free: product.isFree || false,
-        category: product.category,
-        city: product.city,
-        images: product.images || [],
-        contact_phone: product.contact?.phone || '',
-        contact_telegram: product.contact?.telegram || '',
-        status: 'active',
-      };
+      try {
+        // Prepare data for Supabase
+        const supabaseData = {
+          user_id: user.id,
+          title: product.title,
+          description: product.description,
+          price: product.price || 0,
+          is_free: product.isFree || false,
+          category: product.category,
+          city: product.city,
+          images: product.images || [],
+          contact_phone: product.contact?.phone || '',
+          contact_telegram: product.contact?.telegram || '',
+          status: 'active',
+        };
 
-      // Only update if product has a valid UUID (existing Supabase product)
-      if (isValidUUID(product.id)) {
-        // Update existing
-        console.log('Updating product in Supabase:', product.id);
-        const { error } = await updateListing('products', product.id, supabaseData);
-        if (error) {
-          console.error('Error updating product:', error);
-          throw new Error('Помилка оновлення: ' + error.message);
+        console.log('Supabase data to save:', supabaseData);
+
+        // Only update if product has a valid UUID (existing Supabase product)
+        if (isValidUUID(product.id)) {
+          // Update existing
+          console.log('Updating product in Supabase:', product.id);
+          const { data, error } = await updateListing('products', product.id, supabaseData);
+          console.log('Update result:', { data, error });
+          if (error) {
+            throw new Error('Помилка оновлення: ' + error.message);
+          }
+        } else {
+          // Create new
+          console.log('Creating product in Supabase');
+          const { data, error } = await createListing('products', supabaseData);
+          console.log('Create result:', { data, error });
+          if (error) {
+            throw new Error('Помилка створення: ' + error.message);
+          }
         }
-      } else {
-        // Create new
-        console.log('Creating product in Supabase');
-        const { error } = await createListing('products', supabaseData);
-        if (error) {
-          console.error('Error creating product:', error);
-          throw new Error('Помилка створення: ' + error.message);
-        }
+
+        // Reload listings
+        await loadListings();
+      } catch (err) {
+        console.error('Supabase error:', err);
+        throw err;
       }
-
-      // Reload listings
-      await loadListings();
     } else {
+      console.log('Saving to localStorage (no Supabase or user)');
       // Save to localStorage as fallback
       const existingIndex = userProducts.findIndex(p => p.id === product.id);
       let updated;

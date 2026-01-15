@@ -628,33 +628,46 @@ export function RentalPage({ onNavigate }) {
   };
 
   const handleAddRental = async (rental) => {
-    if (isBackendReady && supabase && user) {
-      const supabaseData = {
-        user_id: user.id,
-        title: rental.title,
-        description: rental.description,
-        price: rental.price || 0,
-        rental_type: rental.category,
-        city: rental.city,
-        images: rental.images || [],
-        contact_phone: rental.contact?.phone || '',
-        contact_telegram: rental.contact?.telegram || '',
-        status: 'active',
-      };
+    console.log('Adding/updating rental:', rental);
+    console.log('isBackendReady:', isBackendReady, 'supabase:', !!supabase, 'user:', user);
 
-      if (isValidUUID(rental.id)) {
-        const { error } = await updateListing('rentals', rental.id, supabaseData);
-        if (error) {
-          throw new Error('Помилка оновлення: ' + error.message);
+    if (isBackendReady && supabase && user) {
+      try {
+        const supabaseData = {
+          user_id: user.id,
+          title: rental.title,
+          description: rental.description,
+          price: rental.price || 0,
+          rental_type: rental.category,
+          city: rental.city,
+          images: rental.images || [],
+          contact_phone: rental.contact?.phone || '',
+          contact_telegram: rental.contact?.telegram || '',
+          status: 'active',
+        };
+
+        console.log('Supabase data to save:', supabaseData);
+
+        if (isValidUUID(rental.id)) {
+          const { data, error } = await updateListing('rentals', rental.id, supabaseData);
+          console.log('Update result:', { data, error });
+          if (error) {
+            throw new Error('Помилка оновлення: ' + error.message);
+          }
+        } else {
+          const { data, error } = await createListing('rentals', supabaseData);
+          console.log('Create result:', { data, error });
+          if (error) {
+            throw new Error('Помилка створення: ' + error.message);
+          }
         }
-      } else {
-        const { error } = await createListing('rentals', supabaseData);
-        if (error) {
-          throw new Error('Помилка створення: ' + error.message);
-        }
+        await loadListings();
+      } catch (err) {
+        console.error('Supabase error:', err);
+        throw err;
       }
-      await loadListings();
     } else {
+      console.log('Saving to localStorage (no Supabase or user)');
       const existingIndex = userRentals.findIndex(r => r.id === rental.id);
       let updated;
       if (existingIndex >= 0) {
