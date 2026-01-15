@@ -609,6 +609,13 @@ function AuthRequiredModal({ onClose, onLogin }) {
   );
 }
 
+// Helper to check if string is a valid UUID
+const isValidUUID = (str) => {
+  if (!str) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 // Main Food Page
 export function FoodPage({ onNavigate }) {
   const { user, isAuthenticated } = useAuth();
@@ -694,7 +701,7 @@ export function FoodPage({ onNavigate }) {
           status: 'active',
         };
 
-        if (item.id && !item.id.toString().startsWith('local-')) {
+        if (isValidUUID(item.id)) {
           const { error } = await updateListing('food', item.id, supabaseData);
           if (error) {
             alert('Помилка оновлення: ' + error.message);

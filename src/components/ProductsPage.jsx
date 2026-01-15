@@ -649,6 +649,13 @@ function AuthRequiredModal({ onClose, onLogin }) {
   );
 }
 
+// Helper to check if string is a valid UUID
+const isValidUUID = (str) => {
+  if (!str) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 // Main Products Page
 export function ProductsPage({ onNavigate }) {
   const { user, isAuthenticated } = useAuth();
@@ -746,7 +753,8 @@ export function ProductsPage({ onNavigate }) {
           status: 'active',
         };
 
-        if (product.id && !product.id.toString().startsWith('local-')) {
+        // Only update if product has a valid UUID (existing Supabase product)
+        if (isValidUUID(product.id)) {
           // Update existing
           console.log('Updating product in Supabase:', product.id);
           const { data, error } = await updateListing('products', product.id, supabaseData);
