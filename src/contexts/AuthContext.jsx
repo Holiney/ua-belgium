@@ -32,7 +32,6 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);
@@ -67,90 +66,48 @@ export function AuthProvider({ children }) {
 
   // Send OTP to phone number
   const sendOtp = async (phone) => {
-    console.log('=== SEND OTP START ===');
-    console.log('isBackendReady:', isBackendReady);
-    console.log('supabase client exists:', !!supabase);
-    console.log('Phone:', phone);
-
     if (!isBackendReady || !supabase) {
-      console.error('Backend not ready!');
       return { error: new Error('Backend not configured') };
     }
 
     try {
-      console.log('Calling supabase.auth.signInWithOtp...');
-
-      const { data, error } = await supabase.auth.signInWithOtp({
-        phone: phone,
-      });
-
-      console.log('signInWithOtp response:');
-      console.log('- data:', data);
-      console.log('- error:', error);
-
-      if (error) {
-        console.error('Send OTP error:', error);
-        return { error };
-      }
-
-      console.log('OTP sent successfully!');
-      return { data, error: null };
+      const { data, error } = await supabase.auth.signInWithOtp({ phone });
+      return { data, error };
     } catch (error) {
-      console.error('Send OTP exception:', error);
+      console.error('Send OTP error:', error);
       return { error };
     }
   };
 
   // Verify OTP code
   const verifyOtp = async (phone, token) => {
-    console.log('=== VERIFY OTP START ===');
-    console.log('Phone:', phone);
-    console.log('Token:', token);
-
     if (!isBackendReady || !supabase) {
-      console.error('Backend not ready!');
       return { error: new Error('Backend not configured') };
     }
 
     try {
-      console.log('Calling supabase.auth.verifyOtp...');
-
       const { data, error } = await supabase.auth.verifyOtp({
-        phone: phone,
-        token: token,
+        phone,
+        token,
         type: 'sms',
       });
 
-      console.log('verifyOtp response:');
-      console.log('- data:', data);
-      console.log('- error:', error);
+      if (error) return { error };
 
-      if (error) {
-        console.error('Verify OTP error:', error);
-        return { error };
-      }
-
-      console.log('OTP verified successfully!');
-      console.log('User:', data.user);
-
-      // Create/update profile after successful auth
+      // Create profile only if it doesn't exist (don't overwrite existing data)
       if (data.user) {
-        console.log('Creating/updating profile...');
-        const profileData = {
-          id: data.user.id,
-          phone: phone,
-          name: data.user.user_metadata?.name || 'Користувач',
-        };
-        console.log('Profile data:', profileData);
-
-        const { data: profileResult, error: profileError } = await supabase
+        const { data: existingProfile } = await supabase
           .from('profiles')
-          .upsert(profileData, { onConflict: 'id' })
-          .select();
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
 
-        console.log('Profile upsert result:', profileResult);
-        if (profileError) {
-          console.error('Profile upsert error:', profileError);
+        if (!existingProfile) {
+          await supabase.from('profiles').insert({
+            id: data.user.id,
+            phone: phone,
+            name: 'Користувач',
+          });
         }
 
         await loadProfile(data.user.id);
@@ -158,7 +115,7 @@ export function AuthProvider({ children }) {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Verify OTP exception:', error);
+      console.error('Verify OTP error:', error);
       return { error };
     }
   };
@@ -226,20 +183,10 @@ export function AuthProvider({ children }) {
   };
 
   const updateProfile = async (updates) => {
-    console.log('updateProfile called with:', updates);
-    console.log('Current user:', user);
-
-    if (!user) {
-      console.error('No user found');
-      return { error: new Error('Not authenticated') };
-    }
-    if (!isBackendReady || !supabase) {
-      console.error('Backend not ready');
-      return { error: new Error('Backend not configured') };
-    }
+    if (!user) return { error: new Error('Not authenticated') };
+    if (!isBackendReady || !supabase) return { error: new Error('Backend not configured') };
 
     try {
-      console.log('Updating profile for user:', user.id);
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -247,14 +194,12 @@ export function AuthProvider({ children }) {
         .select()
         .single();
 
-      console.log('Update result:', { data, error });
-
       if (!error && data) {
         setProfile(data);
       }
       return { data, error };
     } catch (err) {
-      console.error('Update profile exception:', err);
+      console.error('Update profile error:', err);
       return { error: err };
     }
   };
