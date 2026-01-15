@@ -655,6 +655,13 @@ function AuthRequiredModal({ onClose, onLogin }) {
   );
 }
 
+// Helper to check if string is a valid UUID
+const isValidUUID = (str) => {
+  if (!str) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 // Main Rental Page
 export function RentalPage({ onNavigate }) {
   const { user, isAuthenticated } = useAuth();
@@ -740,7 +747,7 @@ export function RentalPage({ onNavigate }) {
           status: 'active',
         };
 
-        if (rental.id && !rental.id.toString().startsWith('local-')) {
+        if (isValidUUID(rental.id)) {
           const { error } = await updateListing('rentals', rental.id, supabaseData);
           if (error) {
             alert('Помилка оновлення: ' + error.message);
