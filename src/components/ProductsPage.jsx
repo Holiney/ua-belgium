@@ -3,6 +3,7 @@ import { Plus, X, Heart, MapPin, Phone, MessageCircle, Gift, Search, Image, Chev
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase, isBackendReady, createListing, updateListing, deleteListing, getListings } from '../lib/supabase';
 
 // Categories for products
 export const categories = [
@@ -473,6 +474,11 @@ function ProductCard({ product, isFavorite, onToggleFavorite, isOwner, onEdit, o
   const category = categories.find(c => c.id === product.category);
   const city = cities.find(c => c.id === product.city);
 
+  // Handle both local and Supabase data formats
+  const isFree = product.isFree || product.is_free;
+  const contactPhone = product.contact?.phone || product.contact_phone;
+  const contactTelegram = product.contact?.telegram || product.contact_telegram;
+
   return (
     <Card className="overflow-hidden">
       {product.images && product.images.length > 0 && (
@@ -545,7 +551,7 @@ function ProductCard({ product, isFavorite, onToggleFavorite, isOwner, onEdit, o
         </div>
 
         <div className="flex items-center gap-2 mb-2">
-          {product.isFree ? (
+          {isFree ? (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium">
               <Gift className="w-4 h-4" />
               Безкоштовно
@@ -582,24 +588,24 @@ function ProductCard({ product, isFavorite, onToggleFavorite, isOwner, onEdit, o
 
         {showContacts && (
           <div className="mt-3 pt-3 border-t dark:border-gray-700 space-y-2">
-            {product.contact?.phone && (
+            {contactPhone && (
               <a
-                href={`tel:${product.contact.phone}`}
+                href={`tel:${contactPhone}`}
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600"
               >
                 <Phone className="w-4 h-4" />
-                {product.contact.phone}
+                {contactPhone}
               </a>
             )}
-            {product.contact?.telegram && (
+            {contactTelegram && (
               <a
-                href={`https://t.me/${product.contact.telegram.replace('@', '')}`}
+                href={`https://t.me/${contactTelegram.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600"
               >
                 <MessageCircle className="w-4 h-4" />
-                {product.contact.telegram}
+                {contactTelegram}
               </a>
             )}
           </div>
@@ -654,8 +660,40 @@ export function ProductsPage({ onNavigate }) {
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [userProducts, setUserProducts] = useState(() => loadFromStorage('products-items', []));
+  const [userProducts, setUserProducts] = useState([]);
   const [favorites, setFavorites] = useState(() => loadFromStorage('products-favorites', []));
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load listings from Supabase or localStorage
+  useEffect(() => {
+    loadListings();
+  }, [user]);
+
+  const loadListings = async () => {
+    setIsLoading(true);
+    try {
+      if (isBackendReady && supabase) {
+        // Load from Supabase
+        const { data, error } = await getListings('products');
+        if (error) {
+          console.error('Error loading products from Supabase:', error);
+          // Fallback to localStorage
+          setUserProducts(loadFromStorage('products-items', []));
+        } else {
+          console.log('Loaded products from Supabase:', data);
+          setUserProducts(data || []);
+        }
+      } else {
+        // Load from localStorage
+        setUserProducts(loadFromStorage('products-items', []));
+      }
+    } catch (err) {
+      console.error('Error loading listings:', err);
+      setUserProducts(loadFromStorage('products-items', []));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Check for item to edit from profile page
   useEffect(() => {
@@ -668,14 +706,14 @@ export function ProductsPage({ onNavigate }) {
   }, []);
 
   const allProducts = [...userProducts, ...mockProducts].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
   );
 
   const filteredProducts = allProducts.filter(product => {
     if (selectedCategory !== 'all' && product.category !== selectedCategory) return false;
     if (selectedCity !== 'all' && product.city !== selectedCity) return false;
     if (selectedCondition !== 'all' && product.condition !== selectedCondition) return false;
-    if (showFreeOnly && !product.isFree) return false;
+    if (showFreeOnly && !product.isFree && !product.is_free) return false;
     if (searchQuery && !product.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
@@ -688,22 +726,87 @@ export function ProductsPage({ onNavigate }) {
     }
   };
 
-  const handleAddProduct = (product) => {
-    const existingIndex = userProducts.findIndex(p => p.id === product.id);
-    let updated;
-    if (existingIndex >= 0) {
-      updated = [...userProducts];
-      updated[existingIndex] = product;
+  const handleAddProduct = async (product) => {
+    console.log('Adding/updating product:', product);
+
+    if (isBackendReady && supabase && user) {
+      try {
+        // Prepare data for Supabase
+        const supabaseData = {
+          user_id: user.id,
+          title: product.title,
+          description: product.description,
+          price: product.price || 0,
+          is_free: product.isFree || false,
+          category: product.category,
+          city: product.city,
+          images: product.images || [],
+          contact_phone: product.contact?.phone || '',
+          contact_telegram: product.contact?.telegram || '',
+          status: 'active',
+        };
+
+        if (product.id && !product.id.toString().startsWith('local-')) {
+          // Update existing
+          console.log('Updating product in Supabase:', product.id);
+          const { data, error } = await updateListing('products', product.id, supabaseData);
+          if (error) {
+            console.error('Error updating product:', error);
+            alert('Помилка оновлення: ' + error.message);
+            return;
+          }
+          console.log('Product updated:', data);
+        } else {
+          // Create new
+          console.log('Creating product in Supabase');
+          const { data, error } = await createListing('products', supabaseData);
+          if (error) {
+            console.error('Error creating product:', error);
+            alert('Помилка створення: ' + error.message);
+            return;
+          }
+          console.log('Product created:', data);
+        }
+
+        // Reload listings
+        await loadListings();
+      } catch (err) {
+        console.error('Error saving product:', err);
+        alert('Помилка збереження');
+      }
     } else {
-      updated = [product, ...userProducts];
+      // Save to localStorage as fallback
+      const existingIndex = userProducts.findIndex(p => p.id === product.id);
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...userProducts];
+        updated[existingIndex] = product;
+      } else {
+        updated = [product, ...userProducts];
+      }
+      setUserProducts(updated);
+      saveToStorage('products-items', updated);
     }
-    setUserProducts(updated);
-    saveToStorage('products-items', updated);
+
     setEditingProduct(null);
   };
 
-  const handleDeleteProduct = (productId) => {
-    if (confirm('Видалити це оголошення?')) {
+  const handleDeleteProduct = async (productId) => {
+    if (!confirm('Видалити це оголошення?')) return;
+
+    if (isBackendReady && supabase && user) {
+      try {
+        const { error } = await deleteListing('products', productId);
+        if (error) {
+          console.error('Error deleting product:', error);
+          alert('Помилка видалення: ' + error.message);
+          return;
+        }
+        await loadListings();
+      } catch (err) {
+        console.error('Error deleting product:', err);
+      }
+    } else {
       const updated = userProducts.filter(p => p.id !== productId);
       setUserProducts(updated);
       saveToStorage('products-items', updated);
@@ -724,9 +827,8 @@ export function ProductsPage({ onNavigate }) {
   };
 
   const isOwner = (product) => {
-    if (!product.isUserItem) return false;
-    const currentUserId = user?.id || getLocalUserId();
-    return product.userId === currentUserId;
+    if (!user) return false;
+    return product.user_id === user.id || product.userId === user.id;
   };
 
   return (
