@@ -25,27 +25,35 @@ export const signOut = async () => {
 
 // Database helpers for listings
 export const getListings = async (table, filters = {}) => {
-  let query = supabase
-    .from(table)
-    .select('*, profiles(name, telegram)')
-    .eq('status', 'active')
-    .order('created_at', { ascending: false });
+  console.log('getListings called for table:', table, 'filters:', filters);
 
-  if (filters.category && filters.category !== 'all') {
-    query = query.eq('category', filters.category);
-  }
-  if (filters.city && filters.city !== 'all') {
-    query = query.eq('city', filters.city);
-  }
-  if (filters.type) {
-    query = query.eq('type', filters.type);
-  }
-  if (filters.userId) {
-    query = query.eq('user_id', filters.userId);
-  }
+  try {
+    let query = supabase
+      .from(table)
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
 
-  const { data, error } = await query;
-  return { data, error };
+    if (filters.category && filters.category !== 'all') {
+      query = query.eq('category', filters.category);
+    }
+    if (filters.city && filters.city !== 'all') {
+      query = query.eq('city', filters.city);
+    }
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
+
+    const { data, error } = await query;
+    console.log('getListings result for', table, ':', { data, error, count: data?.length });
+    return { data, error };
+  } catch (err) {
+    console.error('getListings exception:', err);
+    return { data: null, error: err };
+  }
 };
 
 export const createListing = async (table, listing) => {
