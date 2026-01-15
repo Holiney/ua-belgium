@@ -3,6 +3,7 @@ import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Clock, Image, Che
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase, isBackendReady, createListing, updateListing, deleteListing, getListings } from '../lib/supabase';
 
 // Get or create local user ID for anonymous users
 function getLocalUserId() {
@@ -434,6 +435,10 @@ function FoodCard({ item, isFavorite, onToggleFavorite, isOwner, onEdit, onDelet
   const category = categories.find(c => c.id === item.category);
   const city = cities.find(c => c.id === item.city);
 
+  // Handle both local and Supabase data formats
+  const contactPhone = item.contact?.phone || item.contact_phone;
+  const contactTelegram = item.contact?.telegram || item.contact_telegram;
+
   return (
     <Card className="overflow-hidden">
       {item.images && item.images.length > 0 && (
@@ -543,24 +548,24 @@ function FoodCard({ item, isFavorite, onToggleFavorite, isOwner, onEdit, onDelet
 
         {showContacts && (
           <div className="mt-3 pt-3 border-t dark:border-gray-700 space-y-2">
-            {item.contact?.phone && (
+            {contactPhone && (
               <a
-                href={`tel:${item.contact.phone}`}
+                href={`tel:${contactPhone}`}
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600"
               >
                 <Phone className="w-4 h-4" />
-                {item.contact.phone}
+                {contactPhone}
               </a>
             )}
-            {item.contact?.telegram && (
+            {contactTelegram && (
               <a
-                href={`https://t.me/${item.contact.telegram.replace('@', '')}`}
+                href={`https://t.me/${contactTelegram.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600"
               >
                 <MessageCircle className="w-4 h-4" />
-                {item.contact.telegram}
+                {contactTelegram}
               </a>
             )}
           </div>
@@ -613,8 +618,36 @@ export function FoodPage({ onNavigate }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [userItems, setUserItems] = useState(() => loadFromStorage('food-items', []));
+  const [userItems, setUserItems] = useState([]);
   const [favorites, setFavorites] = useState(() => loadFromStorage('food-favorites', []));
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load listings from Supabase or localStorage
+  useEffect(() => {
+    loadListings();
+  }, [user]);
+
+  const loadListings = async () => {
+    setIsLoading(true);
+    try {
+      if (isBackendReady && supabase) {
+        const { data, error } = await getListings('food');
+        if (error) {
+          console.error('Error loading food from Supabase:', error);
+          setUserItems(loadFromStorage('food-items', []));
+        } else {
+          setUserItems(data || []);
+        }
+      } else {
+        setUserItems(loadFromStorage('food-items', []));
+      }
+    } catch (err) {
+      console.error('Error loading listings:', err);
+      setUserItems(loadFromStorage('food-items', []));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Check for item to edit from profile page
   useEffect(() => {
@@ -622,12 +655,12 @@ export function FoodPage({ onNavigate }) {
     if (editingData && editingData.type === 'food' && editingData.item) {
       setEditingItem(editingData.item);
       setShowAddForm(true);
-      saveToStorage('editing-item', null); // Clear after use
+      saveToStorage('editing-item', null);
     }
   }, []);
 
   const allItems = [...userItems, ...mockFoodItems].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
   );
 
   const filteredItems = allItems.filter(item => {
@@ -645,22 +678,70 @@ export function FoodPage({ onNavigate }) {
     }
   };
 
-  const handleAddItem = (item) => {
-    const existingIndex = userItems.findIndex(i => i.id === item.id);
-    let updated;
-    if (existingIndex >= 0) {
-      updated = [...userItems];
-      updated[existingIndex] = item;
+  const handleAddItem = async (item) => {
+    if (isBackendReady && supabase && user) {
+      try {
+        const supabaseData = {
+          user_id: user.id,
+          title: item.title,
+          description: item.description,
+          price: item.price || 0,
+          category: item.category,
+          city: item.city,
+          images: item.images || [],
+          contact_phone: item.contact?.phone || '',
+          contact_telegram: item.contact?.telegram || '',
+          status: 'active',
+        };
+
+        if (item.id && !item.id.toString().startsWith('local-')) {
+          const { error } = await updateListing('food', item.id, supabaseData);
+          if (error) {
+            alert('Помилка оновлення: ' + error.message);
+            return;
+          }
+        } else {
+          const { error } = await createListing('food', supabaseData);
+          if (error) {
+            alert('Помилка створення: ' + error.message);
+            return;
+          }
+        }
+        await loadListings();
+      } catch (err) {
+        console.error('Error saving food:', err);
+        alert('Помилка збереження');
+      }
     } else {
-      updated = [item, ...userItems];
+      const existingIndex = userItems.findIndex(i => i.id === item.id);
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...userItems];
+        updated[existingIndex] = item;
+      } else {
+        updated = [item, ...userItems];
+      }
+      setUserItems(updated);
+      saveToStorage('food-items', updated);
     }
-    setUserItems(updated);
-    saveToStorage('food-items', updated);
     setEditingItem(null);
   };
 
-  const handleDeleteItem = (itemId) => {
-    if (confirm('Видалити це оголошення?')) {
+  const handleDeleteItem = async (itemId) => {
+    if (!confirm('Видалити це оголошення?')) return;
+
+    if (isBackendReady && supabase && user) {
+      try {
+        const { error } = await deleteListing('food', itemId);
+        if (error) {
+          alert('Помилка видалення: ' + error.message);
+          return;
+        }
+        await loadListings();
+      } catch (err) {
+        console.error('Error deleting food:', err);
+      }
+    } else {
       const updated = userItems.filter(i => i.id !== itemId);
       setUserItems(updated);
       saveToStorage('food-items', updated);
@@ -681,9 +762,8 @@ export function FoodPage({ onNavigate }) {
   };
 
   const isOwner = (item) => {
-    if (!item.isUserItem) return false;
-    const currentUserId = user?.id || getLocalUserId();
-    return item.userId === currentUserId;
+    if (!user) return false;
+    return item.user_id === user.id || item.userId === user.id;
   };
 
   return (
