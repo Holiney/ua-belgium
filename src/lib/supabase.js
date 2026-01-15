@@ -23,70 +23,39 @@ export const signOut = async () => {
   return { error };
 };
 
-// Helper function with timeout
-const withTimeout = (promise, ms, tableName) => {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout: ${tableName} query took more than ${ms}ms`)), ms)
-    )
-  ]);
-};
-
 // Database helpers for listings
 export const getListings = async (table, filters = {}) => {
-  console.log('=== getListings START ===', table);
-
   if (!supabase) {
-    console.error('Supabase client is null!');
     return { data: [], error: new Error('Supabase not configured') };
   }
 
-  try {
-    console.log('Starting query for', table, '...');
+  let query = supabase
+    .from(table)
+    .select('*')
+    .order('created_at', { ascending: false });
 
-    // Simple query with timeout
-    let query = supabase
-      .from(table)
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    // Apply status filter
-    if (filters.status !== undefined) {
-      query = query.eq('status', filters.status);
-    } else if (filters.includeAll !== true) {
-      query = query.eq('status', 'active');
-    }
-
-    if (filters.category && filters.category !== 'all') {
-      query = query.eq('category', filters.category);
-    }
-    if (filters.city && filters.city !== 'all') {
-      query = query.eq('city', filters.city);
-    }
-    if (filters.type) {
-      query = query.eq('type', filters.type);
-    }
-    if (filters.userId) {
-      query = query.eq('user_id', filters.userId);
-    }
-
-    console.log('Executing query with 10s timeout...');
-    const result = await withTimeout(query, 10000, table);
-    const { data, error } = result;
-
-    console.log('Query result for', table, ':', {
-      success: !error,
-      count: data?.length,
-      error: error?.message,
-      firstItem: data?.[0]?.title || data?.[0]?.id
-    });
-
-    return { data: data || [], error };
-  } catch (err) {
-    console.error('getListings error for', table, ':', err.message);
-    return { data: [], error: err };
+  // Apply status filter (default: active)
+  if (filters.status !== undefined) {
+    query = query.eq('status', filters.status);
+  } else if (filters.includeAll !== true) {
+    query = query.eq('status', 'active');
   }
+
+  if (filters.category && filters.category !== 'all') {
+    query = query.eq('category', filters.category);
+  }
+  if (filters.city && filters.city !== 'all') {
+    query = query.eq('city', filters.city);
+  }
+  if (filters.type) {
+    query = query.eq('type', filters.type);
+  }
+  if (filters.userId) {
+    query = query.eq('user_id', filters.userId);
+  }
+
+  const { data, error } = await query;
+  return { data: data || [], error };
 };
 
 export const createListing = async (table, listing) => {
