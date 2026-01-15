@@ -29,33 +29,43 @@ export const getListings = async (table, filters = {}) => {
     return { data: [], error: new Error('Supabase not configured') };
   }
 
-  let query = supabase
-    .from(table)
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    let query = supabase
+      .from(table)
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  // Apply status filter (default: active)
-  if (filters.status !== undefined) {
-    query = query.eq('status', filters.status);
-  } else if (filters.includeAll !== true) {
-    query = query.eq('status', 'active');
-  }
+    // Apply status filter (default: active)
+    if (filters.status !== undefined) {
+      query = query.eq('status', filters.status);
+    } else if (filters.includeAll !== true) {
+      query = query.eq('status', 'active');
+    }
 
-  if (filters.category && filters.category !== 'all') {
-    query = query.eq('category', filters.category);
-  }
-  if (filters.city && filters.city !== 'all') {
-    query = query.eq('city', filters.city);
-  }
-  if (filters.type) {
-    query = query.eq('type', filters.type);
-  }
-  if (filters.userId) {
-    query = query.eq('user_id', filters.userId);
-  }
+    if (filters.category && filters.category !== 'all') {
+      query = query.eq('category', filters.category);
+    }
+    if (filters.city && filters.city !== 'all') {
+      query = query.eq('city', filters.city);
+    }
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+    if (filters.userId) {
+      query = query.eq('user_id', filters.userId);
+    }
 
-  const { data, error } = await query;
-  return { data: data || [], error };
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(`getListings(${table}) error:`, error.message);
+    }
+
+    return { data: data || [], error };
+  } catch (err) {
+    console.error(`getListings(${table}) exception:`, err);
+    return { data: [], error: err };
+  }
 };
 
 export const createListing = async (table, listing) => {
