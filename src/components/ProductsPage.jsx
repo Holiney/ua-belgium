@@ -35,100 +35,6 @@ const conditions = [
   { id: 'used', name: 'Б/У' },
 ];
 
-// Mock data for products (only offers now)
-export const mockProducts = [
-  {
-    id: '1',
-    title: 'iPhone 13 Pro 256GB',
-    category: 'electronics',
-    price: 650,
-    condition: 'used',
-    city: 'brussels',
-    description: 'Відмінний стан, повний комплект, батарея 89%',
-    contact: { phone: '+32 470 123 456', telegram: '@seller1' },
-    images: [],
-    isFree: false,
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '3',
-    title: 'Диван IKEA Kivik',
-    category: 'furniture',
-    price: 200,
-    condition: 'used',
-    city: 'ghent',
-    description: 'Сірий диван, 3-місний, самовивіз',
-    contact: { telegram: '@furniture_seller' },
-    images: [],
-    isFree: false,
-    createdAt: new Date('2026-01-03'),
-  },
-  {
-    id: '4',
-    title: 'Дитяче ліжечко з матрацом',
-    category: 'kids',
-    price: 0,
-    condition: 'used',
-    city: 'brussels',
-    description: 'Віддам безкоштовно, самовивіз з Uccle',
-    contact: { phone: '+32 476 345 678' },
-    images: [],
-    isFree: true,
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '6',
-    title: 'Велосипед Trek FX 3',
-    category: 'transport',
-    price: 450,
-    condition: 'used',
-    city: 'brussels',
-    description: 'Гібридний велосипед, розмір M, в ідеальному стані',
-    contact: { telegram: '@bike_seller' },
-    images: [],
-    isFree: false,
-    createdAt: new Date('2026-01-04'),
-  },
-  {
-    id: '7',
-    title: 'PlayStation 5 + 2 контролери',
-    category: 'electronics',
-    price: 400,
-    condition: 'used',
-    city: 'antwerp',
-    description: 'Консоль з дисководом, мало використовувалась',
-    contact: { phone: '+32 468 567 890' },
-    images: [],
-    isFree: false,
-    createdAt: new Date('2026-01-03'),
-  },
-  {
-    id: '8',
-    title: 'Volkswagen Golf 7 2018',
-    category: 'transport',
-    price: 14500,
-    condition: 'used',
-    city: 'brussels',
-    description: '1.6 TDI, 95000 км, автомат, повна історія',
-    contact: { phone: '+32 477 678 901', telegram: '@auto_be' },
-    images: [],
-    isFree: false,
-    createdAt: new Date('2026-01-01'),
-  },
-  {
-    id: '10',
-    title: 'Жіноча куртка Zara, M',
-    category: 'clothing',
-    price: 45,
-    condition: 'used',
-    city: 'brussels',
-    description: 'Демісезонна, носила один сезон',
-    contact: { telegram: '@clothes_sell' },
-    images: [],
-    isFree: false,
-    createdAt: new Date('2026-01-04'),
-  },
-];
 
 // Image Gallery Component
 function ImageGallery({ images, onRemove, editable = false }) {
@@ -324,6 +230,7 @@ function AddProductForm({ onClose, onAdd, editItem = null }) {
       onClose();
     } catch (err) {
       console.error('Submit error:', err);
+      alert(err.message || 'Помилка збереження');
     } finally {
       setIsSubmitting(false);
     }
@@ -722,7 +629,7 @@ export function ProductsPage({ onNavigate }) {
     }
   }, []);
 
-  const allProducts = [...userProducts, ...mockProducts].sort(
+  const allProducts = [...userProducts].sort(
     (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
   );
 
@@ -747,51 +654,42 @@ export function ProductsPage({ onNavigate }) {
     console.log('Adding/updating product:', product);
 
     if (isBackendReady && supabase && user) {
-      try {
-        // Prepare data for Supabase
-        const supabaseData = {
-          user_id: user.id,
-          title: product.title,
-          description: product.description,
-          price: product.price || 0,
-          is_free: product.isFree || false,
-          category: product.category,
-          city: product.city,
-          images: product.images || [],
-          contact_phone: product.contact?.phone || '',
-          contact_telegram: product.contact?.telegram || '',
-          status: 'active',
-        };
+      // Prepare data for Supabase
+      const supabaseData = {
+        user_id: user.id,
+        title: product.title,
+        description: product.description,
+        price: product.price || 0,
+        is_free: product.isFree || false,
+        category: product.category,
+        city: product.city,
+        images: product.images || [],
+        contact_phone: product.contact?.phone || '',
+        contact_telegram: product.contact?.telegram || '',
+        status: 'active',
+      };
 
-        // Only update if product has a valid UUID (existing Supabase product)
-        if (isValidUUID(product.id)) {
-          // Update existing
-          console.log('Updating product in Supabase:', product.id);
-          const { data, error } = await updateListing('products', product.id, supabaseData);
-          if (error) {
-            console.error('Error updating product:', error);
-            alert('Помилка оновлення: ' + error.message);
-            return;
-          }
-          console.log('Product updated:', data);
-        } else {
-          // Create new
-          console.log('Creating product in Supabase');
-          const { data, error } = await createListing('products', supabaseData);
-          if (error) {
-            console.error('Error creating product:', error);
-            alert('Помилка створення: ' + error.message);
-            return;
-          }
-          console.log('Product created:', data);
+      // Only update if product has a valid UUID (existing Supabase product)
+      if (isValidUUID(product.id)) {
+        // Update existing
+        console.log('Updating product in Supabase:', product.id);
+        const { error } = await updateListing('products', product.id, supabaseData);
+        if (error) {
+          console.error('Error updating product:', error);
+          throw new Error('Помилка оновлення: ' + error.message);
         }
-
-        // Reload listings
-        await loadListings();
-      } catch (err) {
-        console.error('Error saving product:', err);
-        alert('Помилка збереження');
+      } else {
+        // Create new
+        console.log('Creating product in Supabase');
+        const { error } = await createListing('products', supabaseData);
+        if (error) {
+          console.error('Error creating product:', error);
+          throw new Error('Помилка створення: ' + error.message);
+        }
       }
+
+      // Reload listings
+      await loadListings();
     } else {
       // Save to localStorage as fallback
       const existingIndex = userProducts.findIndex(p => p.id === product.id);
