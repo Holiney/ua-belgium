@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ua-belgium-v1.0.2';
+const CACHE_NAME = 'ua-belgium-v1.0.3';
 const STATIC_CACHE = [
   '/manifest.json',
   '/pwa-192.png',

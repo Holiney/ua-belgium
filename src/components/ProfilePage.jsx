@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Card, SectionTitle } from './Layout';
 import { LoginPage } from './PhoneLogin';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
+import { supabase, isBackendReady, getListings, deleteListing } from '../lib/supabase';
 import {
   User,
   LogOut,
@@ -37,17 +38,22 @@ const cityNames = {
 };
 
 export function ProfilePage({ onNavigate }) {
-  const { user, profile, isAuthenticated, loading, signOut, updateProfile, isBackendReady } = useAuth();
+  const { user, profile, isAuthenticated, loading, signOut, updateProfile } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [myListings, setMyListings] = useState({ products: [], food: [], rentals: [] });
+  const [listingsLoading, setListingsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('listings');
   const [editingProfile, setEditingProfile] = useState(false);
   const [localProfile, setLocalProfile] = useState(() => loadFromStorage('user-profile', null));
   const [editForm, setEditForm] = useState({ name: '', phone: '', city: '' });
 
-  // Load listings from localStorage
+  // Load listings from Supabase or localStorage
   useEffect(() => {
-    loadMyListings();
+    if (user) {
+      loadMyListings();
+    } else {
+      setMyListings({ products: [], food: [], rentals: [] });
+    }
   }, [user]);
 
   useEffect(() => {
@@ -61,68 +67,69 @@ export function ProfilePage({ onNavigate }) {
     }
   }, [profile, localProfile]);
 
-  const loadMyListings = () => {
-    const userId = user?.id || loadFromStorage('local-user-id', null);
+  const loadMyListings = async () => {
+    if (!user) return;
 
-    // Load from localStorage
-    const allProducts = loadFromStorage('products-items', []);
-    const allFood = loadFromStorage('food-items', []);
-    const allRentals = loadFromStorage('rental-items', []);
+    setListingsLoading(true);
+    try {
+      if (isBackendReady && supabase) {
+        // Load from Supabase - filter by user_id and include all statuses
+        const [productsRes, foodRes, rentalsRes] = await Promise.all([
+          getListings('products', { userId: user.id, includeAll: true }),
+          getListings('food', { userId: user.id, includeAll: true }),
+          getListings('rentals', { userId: user.id, includeAll: true }),
+        ]);
 
-    // Filter by userId if available, otherwise show all user items
-    const filterByUser = (items) => {
-      if (userId) {
-        return items.filter(item => item.userId === userId || item.isUserItem);
+        setMyListings({
+          products: productsRes.data || [],
+          food: foodRes.data || [],
+          rentals: rentalsRes.data || [],
+        });
+      } else {
+        // Fallback to localStorage
+        const allProducts = loadFromStorage('products-items', []);
+        const allFood = loadFromStorage('food-items', []);
+        const allRentals = loadFromStorage('rental-items', []);
+
+        setMyListings({
+          products: allProducts.filter(item => item.userId === user.id || item.isUserItem),
+          food: allFood.filter(item => item.userId === user.id || item.isUserItem),
+          rentals: allRentals.filter(item => item.userId === user.id || item.isUserItem),
+        });
       }
-      return items.filter(item => item.isUserItem);
-    };
-
-    setMyListings({
-      products: filterByUser(allProducts),
-      food: filterByUser(allFood),
-      rentals: filterByUser(allRentals),
-    });
+    } catch (err) {
+      console.error('Error loading my listings:', err);
+    } finally {
+      setListingsLoading(false);
+    }
   };
 
   const handleSignOut = async () => {
     if (confirm('Ви впевнені, що хочете вийти?')) {
-      console.log('Signing out...');
       try {
-        // Sign out from Supabase if backend ready
-        const { error } = await signOut();
-        if (error) {
-          console.error('Signout error:', error);
-        }
+        await signOut();
+        // Clear local storage but keep theme preference
+        const theme = localStorage.getItem('theme');
+        localStorage.clear();
+        if (theme) localStorage.setItem('theme', theme);
+        // Reload page to reset state
+        window.location.reload();
       } catch (err) {
-        console.error('Signout exception:', err);
+        console.error('Signout error:', err);
+        alert('Помилка виходу. Спробуйте ще раз.');
       }
-
-      // Clear ALL local data
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Force redirect to home
-      window.location.href = '/';
     }
   };
 
   const handleSaveProfile = async () => {
-    console.log('Saving profile...', editForm);
-
     // Save to Supabase if available
     if (isBackendReady && user) {
-      // Only send name and city (phone cannot be changed)
-      const updateData = {
+      const { error } = await updateProfile({
         name: editForm.name,
         city: editForm.city,
-      };
-      console.log('Updating Supabase with:', updateData);
-
-      const { data, error } = await updateProfile(updateData);
-      console.log('Supabase response:', { data, error });
+      });
 
       if (error) {
-        console.error('Profile update error:', error);
         alert('Помилка збереження: ' + (error.message || 'Невідома помилка'));
         return;
       }
@@ -133,17 +140,32 @@ export function ProfilePage({ onNavigate }) {
     saveToStorage('user-profile', updatedProfile);
     setLocalProfile(updatedProfile);
     setEditingProfile(false);
-    console.log('Profile saved successfully');
   };
 
-  const handleDeleteListing = (type, itemId) => {
+  const handleDeleteListing = async (type, itemId) => {
     if (!confirm('Видалити це оголошення?')) return;
 
-    const storageKey = `${type}-items`;
-    const items = loadFromStorage(storageKey, []);
-    const updated = items.filter(item => item.id !== itemId);
-    saveToStorage(storageKey, updated);
-    loadMyListings();
+    try {
+      if (isBackendReady && supabase) {
+        // Delete from Supabase
+        const tableMap = { products: 'products', food: 'food', rentals: 'rentals' };
+        const { error } = await deleteListing(tableMap[type], itemId);
+        if (error) {
+          console.error('Delete error:', error);
+          alert('Помилка видалення: ' + error.message);
+          return;
+        }
+      }
+      // Also remove from localStorage
+      const storageKey = `${type}-items`;
+      const items = loadFromStorage(storageKey, []);
+      const updated = items.filter(item => item.id !== itemId);
+      saveToStorage(storageKey, updated);
+      await loadMyListings();
+    } catch (err) {
+      console.error('Delete exception:', err);
+      alert('Помилка видалення');
+    }
   };
 
   const handleEditListing = (type, item) => {
