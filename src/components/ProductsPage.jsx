@@ -604,7 +604,6 @@ export function ProductsPage({ onNavigate }) {
           // Fallback to localStorage
           setUserProducts(loadFromStorage('products-items', []));
         } else {
-          console.log('Loaded products from Supabase:', data);
           setUserProducts(data || []);
         }
       } else {
@@ -651,9 +650,6 @@ export function ProductsPage({ onNavigate }) {
   };
 
   const handleAddProduct = async (product) => {
-    console.log('Adding/updating product:', product);
-    console.log('isBackendReady:', isBackendReady, 'supabase:', !!supabase, 'user:', user);
-
     if (isBackendReady && supabase && user) {
       try {
         // Prepare data for Supabase
@@ -671,22 +667,14 @@ export function ProductsPage({ onNavigate }) {
           status: 'active',
         };
 
-        console.log('Supabase data to save:', supabaseData);
-
         // Only update if product has a valid UUID (existing Supabase product)
         if (isValidUUID(product.id)) {
-          // Update existing
-          console.log('Updating product in Supabase:', product.id);
-          const { data, error } = await updateListing('products', product.id, supabaseData);
-          console.log('Update result:', { data, error });
+          const { error } = await updateListing('products', product.id, supabaseData);
           if (error) {
             throw new Error('Помилка оновлення: ' + error.message);
           }
         } else {
-          // Create new
-          console.log('Creating product in Supabase');
-          const { data, error } = await createListing('products', supabaseData);
-          console.log('Create result:', { data, error });
+          const { error } = await createListing('products', supabaseData);
           if (error) {
             throw new Error('Помилка створення: ' + error.message);
           }
@@ -699,7 +687,6 @@ export function ProductsPage({ onNavigate }) {
         throw err;
       }
     } else {
-      console.log('Saving to localStorage (no Supabase or user)');
       // Save to localStorage as fallback
       const existingIndex = userProducts.findIndex(p => p.id === product.id);
       let updated;

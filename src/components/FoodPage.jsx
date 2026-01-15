@@ -569,9 +569,6 @@ export function FoodPage({ onNavigate }) {
   };
 
   const handleAddItem = async (item) => {
-    console.log('Adding/updating food item:', item);
-    console.log('isBackendReady:', isBackendReady, 'supabase:', !!supabase, 'user:', user);
-
     if (isBackendReady && supabase && user) {
       try {
         const supabaseData = {
@@ -587,17 +584,13 @@ export function FoodPage({ onNavigate }) {
           status: 'active',
         };
 
-        console.log('Supabase data to save:', supabaseData);
-
         if (isValidUUID(item.id)) {
-          const { data, error } = await updateListing('food', item.id, supabaseData);
-          console.log('Update result:', { data, error });
+          const { error } = await updateListing('food', item.id, supabaseData);
           if (error) {
             throw new Error('Помилка оновлення: ' + error.message);
           }
         } else {
-          const { data, error } = await createListing('food', supabaseData);
-          console.log('Create result:', { data, error });
+          const { error } = await createListing('food', supabaseData);
           if (error) {
             throw new Error('Помилка створення: ' + error.message);
           }
@@ -608,7 +601,6 @@ export function FoodPage({ onNavigate }) {
         throw err;
       }
     } else {
-      console.log('Saving to localStorage (no Supabase or user)');
       const existingIndex = userItems.findIndex(i => i.id === item.id);
       let updated;
       if (existingIndex >= 0) {

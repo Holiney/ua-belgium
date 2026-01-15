@@ -628,9 +628,6 @@ export function RentalPage({ onNavigate }) {
   };
 
   const handleAddRental = async (rental) => {
-    console.log('Adding/updating rental:', rental);
-    console.log('isBackendReady:', isBackendReady, 'supabase:', !!supabase, 'user:', user);
-
     if (isBackendReady && supabase && user) {
       try {
         const supabaseData = {
@@ -646,17 +643,13 @@ export function RentalPage({ onNavigate }) {
           status: 'active',
         };
 
-        console.log('Supabase data to save:', supabaseData);
-
         if (isValidUUID(rental.id)) {
-          const { data, error } = await updateListing('rentals', rental.id, supabaseData);
-          console.log('Update result:', { data, error });
+          const { error } = await updateListing('rentals', rental.id, supabaseData);
           if (error) {
             throw new Error('Помилка оновлення: ' + error.message);
           }
         } else {
-          const { data, error } = await createListing('rentals', supabaseData);
-          console.log('Create result:', { data, error });
+          const { error } = await createListing('rentals', supabaseData);
           if (error) {
             throw new Error('Помилка створення: ' + error.message);
           }
@@ -667,7 +660,6 @@ export function RentalPage({ onNavigate }) {
         throw err;
       }
     } else {
-      console.log('Saving to localStorage (no Supabase or user)');
       const existingIndex = userRentals.findIndex(r => r.id === rental.id);
       let updated;
       if (existingIndex >= 0) {
