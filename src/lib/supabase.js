@@ -23,12 +23,19 @@ export const signOut = async () => {
   return { error };
 };
 
+// Helper function with timeout
+const withTimeout = (promise, ms, tableName) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout: ${tableName} query took more than ${ms}ms`)), ms)
+    )
+  ]);
+};
+
 // Database helpers for listings
 export const getListings = async (table, filters = {}) => {
-  console.log('=== getListings START ===');
-  console.log('Table:', table);
-  console.log('Filters:', filters);
-  console.log('Supabase client exists:', !!supabase);
+  console.log('=== getListings START ===', table);
 
   if (!supabase) {
     console.error('Supabase client is null!');
@@ -36,30 +43,18 @@ export const getListings = async (table, filters = {}) => {
   }
 
   try {
-    // First, try to get ALL records without any filters to diagnose
-    console.log('Fetching ALL records from', table, '(no filters for debug)...');
-    const { data: allData, error: allError } = await supabase
-      .from(table)
-      .select('*');
+    console.log('Starting query for', table, '...');
 
-    console.log('ALL records result:', {
-      count: allData?.length,
-      error: allError,
-      statuses: allData?.map(r => r.status),
-      firstRecord: allData?.[0]
-    });
-
-    // Now apply filters
+    // Simple query with timeout
     let query = supabase
       .from(table)
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Only filter by status if explicitly requested or default to active
+    // Apply status filter
     if (filters.status !== undefined) {
       query = query.eq('status', filters.status);
     } else if (filters.includeAll !== true) {
-      // Default: filter by active status
       query = query.eq('status', 'active');
     }
 
@@ -76,12 +71,20 @@ export const getListings = async (table, filters = {}) => {
       query = query.eq('user_id', filters.userId);
     }
 
-    const { data, error } = await query;
-    console.log('Filtered result for', table, ':', { data, error, count: data?.length });
-    console.log('=== getListings END ===');
+    console.log('Executing query with 10s timeout...');
+    const result = await withTimeout(query, 10000, table);
+    const { data, error } = result;
+
+    console.log('Query result for', table, ':', {
+      success: !error,
+      count: data?.length,
+      error: error?.message,
+      firstItem: data?.[0]?.title || data?.[0]?.id
+    });
+
     return { data: data || [], error };
   } catch (err) {
-    console.error('getListings exception:', err);
+    console.error('getListings error for', table, ':', err.message);
     return { data: [], error: err };
   }
 };
