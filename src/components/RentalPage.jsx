@@ -245,10 +245,13 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
     available: editItem?.available || '',
     images: editItem?.images || [],
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
 
     const userId = user?.id || getLocalUserId();
     const newRental = {
@@ -273,8 +276,14 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
       isUserItem: true,
     };
 
-    onAdd(newRental);
-    onClose();
+    try {
+      await onAdd(newRental);
+      onClose();
+    } catch (err) {
+      console.error('Submit error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -442,9 +451,10 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
 
           <button
             type="submit"
-            className="w-full py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
+            disabled={isSubmitting}
+            className="w-full py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
-            {editItem ? 'Зберегти' : 'Опублікувати'}
+            {isSubmitting ? 'Зберігаємо...' : (editItem ? 'Зберегти' : 'Опублікувати')}
           </button>
         </form>
       </div>
