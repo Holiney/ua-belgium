@@ -36,134 +36,6 @@ export const cities = [
   { id: 'other', name: 'Інше місто' },
 ];
 
-// Mock data for food (only offers)
-export const mockFoodItems = [
-  {
-    id: '1',
-    title: 'Домашні вареники з картоплею',
-    category: 'homemade',
-    price: 12,
-    unit: 'за 1 кг',
-    city: 'brussels',
-    description: 'Ліплю на замовлення. Можу з картоплею, сиром, вишнею. Мінімальне замовлення 1 кг.',
-    contact: { phone: '+32 470 111 222', telegram: '@varenyky_be' },
-    images: [],
-    availableDays: 'Сб-Нд',
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '3',
-    title: 'Сало українське, домашнє',
-    category: 'ukrainian',
-    price: 18,
-    unit: 'за 1 кг',
-    city: 'antwerp',
-    description: 'Привезено з України. Сало з прошарком, засолене з часником та перцем.',
-    contact: { telegram: '@ukraine_products' },
-    images: [],
-    createdAt: new Date('2026-01-04'),
-  },
-  {
-    id: '4',
-    title: 'Торт Київський на замовлення',
-    category: 'baking',
-    price: 45,
-    unit: 'за торт',
-    city: 'brussels',
-    description: 'Готую справжній Київський торт за оригінальним рецептом. Замовлення за 3 дні.',
-    contact: { phone: '+32 485 333 444', telegram: '@cakes_brussels' },
-    images: [],
-    availableDays: 'За замовленням',
-    createdAt: new Date('2026-01-03'),
-  },
-  {
-    id: '6',
-    title: 'Цукерки Roshen, Корона',
-    category: 'sweets',
-    price: 8,
-    unit: 'за упаковку',
-    city: 'ghent',
-    description: 'Привезені з України. Є різні види: Roshen, Корона, АВК. Пишіть для списку.',
-    contact: { telegram: '@ua_sweets' },
-    images: [],
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '7',
-    title: 'Домашня горілка на горіхах',
-    category: 'drinks',
-    price: 25,
-    unit: 'за 0.5л',
-    city: 'liege',
-    description: 'Настоянка на волоських горіхах. Є також на меду та травах.',
-    contact: { phone: '+32 499 555 666' },
-    images: [],
-    createdAt: new Date('2026-01-02'),
-  },
-  {
-    id: '8',
-    title: 'Мамина консервація: огірки, помідори',
-    category: 'preserves',
-    price: 6,
-    unit: 'за банку',
-    city: 'brussels',
-    description: 'Домашні мариновані огірки та помідори. Як в Україні! 0.5л банки.',
-    contact: { telegram: '@mama_konservy' },
-    images: [],
-    createdAt: new Date('2026-01-04'),
-  },
-  {
-    id: '9',
-    title: 'Борщ домашній',
-    category: 'homemade',
-    price: 8,
-    unit: 'за 1л',
-    city: 'brussels',
-    description: 'Готую український борщ на замовлення. Зі сметаною та пампушками +2€.',
-    contact: { phone: '+32 476 777 888', telegram: '@borsch_be' },
-    images: [],
-    availableDays: 'Пт-Нд',
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '11',
-    title: 'Хліб Бородінський',
-    category: 'baking',
-    price: 5,
-    unit: 'за буханку',
-    city: 'antwerp',
-    description: 'Печу справжній Бородінський хліб. Замовлення за день.',
-    contact: { telegram: '@bread_ua' },
-    images: [],
-    availableDays: 'За замовленням',
-    createdAt: new Date('2026-01-03'),
-  },
-  {
-    id: '12',
-    title: 'Ковбаса домашня з України',
-    category: 'ukrainian',
-    price: 22,
-    unit: 'за 1 кг',
-    city: 'brussels',
-    description: 'Привезено з Закарпаття. Сиров\'ялена ковбаса.',
-    contact: { phone: '+32 468 999 000' },
-    images: [],
-    createdAt: new Date('2026-01-04'),
-  },
-  {
-    id: '13',
-    title: 'Медовик на замовлення',
-    category: 'baking',
-    price: 35,
-    unit: 'за торт',
-    city: 'ghent',
-    description: 'Класичний медовик з натурального меду. 8 порцій.',
-    contact: { telegram: '@medovyk_gent' },
-    images: [],
-    availableDays: 'За замовленням',
-    createdAt: new Date('2026-01-02'),
-  },
-];
 
 // Image Upload Component
 function ImageUpload({ images, onChange, maxImages = 5 }) {
@@ -289,6 +161,7 @@ function AddFoodForm({ onClose, onAdd, editItem = null }) {
       onClose();
     } catch (err) {
       console.error('Submit error:', err);
+      alert(err.message || 'Помилка збереження');
     } finally {
       setIsSubmitting(false);
     }
@@ -676,7 +549,7 @@ export function FoodPage({ onNavigate }) {
     }
   }, []);
 
-  const allItems = [...userItems, ...mockFoodItems].sort(
+  const allItems = [...userItems].sort(
     (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
   );
 
@@ -697,38 +570,31 @@ export function FoodPage({ onNavigate }) {
 
   const handleAddItem = async (item) => {
     if (isBackendReady && supabase && user) {
-      try {
-        const supabaseData = {
-          user_id: user.id,
-          title: item.title,
-          description: item.description,
-          price: item.price || 0,
-          category: item.category,
-          city: item.city,
-          images: item.images || [],
-          contact_phone: item.contact?.phone || '',
-          contact_telegram: item.contact?.telegram || '',
-          status: 'active',
-        };
+      const supabaseData = {
+        user_id: user.id,
+        title: item.title,
+        description: item.description,
+        price: item.price || 0,
+        category: item.category,
+        city: item.city,
+        images: item.images || [],
+        contact_phone: item.contact?.phone || '',
+        contact_telegram: item.contact?.telegram || '',
+        status: 'active',
+      };
 
-        if (isValidUUID(item.id)) {
-          const { error } = await updateListing('food', item.id, supabaseData);
-          if (error) {
-            alert('Помилка оновлення: ' + error.message);
-            return;
-          }
-        } else {
-          const { error } = await createListing('food', supabaseData);
-          if (error) {
-            alert('Помилка створення: ' + error.message);
-            return;
-          }
+      if (isValidUUID(item.id)) {
+        const { error } = await updateListing('food', item.id, supabaseData);
+        if (error) {
+          throw new Error('Помилка оновлення: ' + error.message);
         }
-        await loadListings();
-      } catch (err) {
-        console.error('Error saving food:', err);
-        alert('Помилка збереження');
+      } else {
+        const { error } = await createListing('food', supabaseData);
+        if (error) {
+          throw new Error('Помилка створення: ' + error.message);
+        }
       }
+      await loadListings();
     } else {
       const existingIndex = userItems.findIndex(i => i.id === item.id);
       let updated;

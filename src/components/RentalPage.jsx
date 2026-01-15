@@ -35,121 +35,6 @@ export const cities = [
   { id: 'other', name: 'Інше місто' },
 ];
 
-// Mock data for rentals (only offers)
-export const mockRentals = [
-  {
-    id: '1',
-    title: 'Затишна квартира біля центру',
-    category: 'apartment',
-    price: 950,
-    priceType: 'month',
-    rooms: 2,
-    city: 'brussels',
-    district: 'Ixelles',
-    description: '2-кімнатна квартира, мебльована, поруч метро. Включено воду та опалення.',
-    features: ['Мебльована', 'Метро поруч', 'Балкон'],
-    contact: { phone: '+32 470 111 222', telegram: '@rental_bru' },
-    available: 'з 1 лютого',
-    images: [],
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '3',
-    title: 'Кімната в спільній квартирі',
-    category: 'room',
-    price: 450,
-    priceType: 'month',
-    rooms: 1,
-    city: 'ghent',
-    district: 'Центр',
-    description: 'Кімната 15м² в квартирі з 2 сусідами (українці). Спільна кухня та ванна.',
-    features: ['Мебльована', 'Українські сусіди', 'Wi-Fi'],
-    contact: { telegram: '@room_gent' },
-    available: 'одразу',
-    images: [],
-    createdAt: new Date('2026-01-04'),
-  },
-  {
-    id: '5',
-    title: 'Квартира подобово / короткострок',
-    category: 'short-term',
-    price: 65,
-    priceType: 'day',
-    rooms: 1,
-    city: 'brussels',
-    district: 'Saint-Gilles',
-    description: 'Студія для короткострокової оренди. Є все необхідне. Мін. 3 ночі.',
-    features: ['Повністю обладнана', 'Wi-Fi', 'Пральна машина'],
-    contact: { phone: '+32 485 333 444' },
-    available: 'перевірте дати',
-    images: [],
-    createdAt: new Date('2026-01-03'),
-  },
-  {
-    id: '6',
-    title: 'Простора квартира для сім\'ї',
-    category: 'apartment',
-    price: 1200,
-    priceType: 'month',
-    rooms: 3,
-    city: 'antwerp',
-    district: 'Borgerhout',
-    description: '3-кімнатна квартира, 85м². Є місце для паркування. Тихий район.',
-    features: ['Паркування', 'Тераса', 'Кладовка'],
-    contact: { telegram: '@flat_antwerp' },
-    available: 'з 15 січня',
-    images: [],
-    createdAt: new Date('2026-01-04'),
-  },
-  {
-    id: '8',
-    title: 'Маленький будинок з садом',
-    category: 'house',
-    price: 1400,
-    priceType: 'month',
-    rooms: 3,
-    city: 'liege',
-    district: 'Передмістя',
-    description: 'Окремий будинок, невеликий сад. Тиха вулиця, 15 хв до центру.',
-    features: ['Сад', 'Гараж', 'Тихе місце'],
-    contact: { phone: '+32 499 555 666' },
-    available: 'з 1 березня',
-    images: [],
-    createdAt: new Date('2026-01-02'),
-  },
-  {
-    id: '9',
-    title: 'Кімната для студента',
-    category: 'room',
-    price: 380,
-    priceType: 'month',
-    rooms: 1,
-    city: 'leuven',
-    district: 'Біля університету',
-    description: 'Кімната в студентському будинку. 10 хв пішки до KU Leuven.',
-    features: ['Поруч університет', 'Спільна кухня', 'Тихо'],
-    contact: { telegram: '@student_leuven' },
-    available: 'з лютого',
-    images: [],
-    createdAt: new Date('2026-01-05'),
-  },
-  {
-    id: '11',
-    title: 'Квартира на вихідні',
-    category: 'short-term',
-    price: 80,
-    priceType: 'day',
-    rooms: 2,
-    city: 'bruges',
-    district: 'Історичний центр',
-    description: 'Атмосферна квартира в центрі Брюгге. Ідеально для туристів.',
-    features: ['Центр міста', 'Вигляд на канал', 'Повністю обладнана'],
-    contact: { phone: '+32 468 777 888' },
-    available: 'перевірте дати',
-    images: [],
-    createdAt: new Date('2026-01-03'),
-  },
-];
 
 // Image Upload Component
 function ImageUpload({ images, onChange, maxImages = 5 }) {
@@ -281,6 +166,7 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
       onClose();
     } catch (err) {
       console.error('Submit error:', err);
+      alert(err.message || 'Помилка збереження');
     } finally {
       setIsSubmitting(false);
     }
@@ -722,7 +608,7 @@ export function RentalPage({ onNavigate }) {
     }
   }, []);
 
-  const allRentals = [...userRentals, ...mockRentals].sort(
+  const allRentals = [...userRentals].sort(
     (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
   );
 
@@ -743,38 +629,31 @@ export function RentalPage({ onNavigate }) {
 
   const handleAddRental = async (rental) => {
     if (isBackendReady && supabase && user) {
-      try {
-        const supabaseData = {
-          user_id: user.id,
-          title: rental.title,
-          description: rental.description,
-          price: rental.price || 0,
-          rental_type: rental.category,
-          city: rental.city,
-          images: rental.images || [],
-          contact_phone: rental.contact?.phone || '',
-          contact_telegram: rental.contact?.telegram || '',
-          status: 'active',
-        };
+      const supabaseData = {
+        user_id: user.id,
+        title: rental.title,
+        description: rental.description,
+        price: rental.price || 0,
+        rental_type: rental.category,
+        city: rental.city,
+        images: rental.images || [],
+        contact_phone: rental.contact?.phone || '',
+        contact_telegram: rental.contact?.telegram || '',
+        status: 'active',
+      };
 
-        if (isValidUUID(rental.id)) {
-          const { error } = await updateListing('rentals', rental.id, supabaseData);
-          if (error) {
-            alert('Помилка оновлення: ' + error.message);
-            return;
-          }
-        } else {
-          const { error } = await createListing('rentals', supabaseData);
-          if (error) {
-            alert('Помилка створення: ' + error.message);
-            return;
-          }
+      if (isValidUUID(rental.id)) {
+        const { error } = await updateListing('rentals', rental.id, supabaseData);
+        if (error) {
+          throw new Error('Помилка оновлення: ' + error.message);
         }
-        await loadListings();
-      } catch (err) {
-        console.error('Error saving rental:', err);
-        alert('Помилка збереження');
+      } else {
+        const { error } = await createListing('rentals', supabaseData);
+        if (error) {
+          throw new Error('Помилка створення: ' + error.message);
+        }
       }
+      await loadListings();
     } else {
       const existingIndex = userRentals.findIndex(r => r.id === rental.id);
       let updated;
