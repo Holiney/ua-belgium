@@ -3,6 +3,7 @@ import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar, I
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase, isBackendReady, createListing, updateListing, deleteListing, getListings } from '../lib/supabase';
 
 // Get or create local user ID for anonymous users
 function getLocalUserId() {
@@ -455,8 +456,12 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
 function RentalCard({ rental, isFavorite, onToggleFavorite, isOwner, onEdit, onDelete }) {
   const [showContacts, setShowContacts] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
-  const category = categories.find(c => c.id === rental.category);
+  const category = categories.find(c => c.id === rental.category || c.id === rental.rental_type);
   const city = cities.find(c => c.id === rental.city);
+
+  // Handle both local and Supabase data formats
+  const contactPhone = rental.contact?.phone || rental.contact_phone;
+  const contactTelegram = rental.contact?.telegram || rental.contact_telegram;
 
   const priceLabel = {
     month: '/міс',
@@ -589,24 +594,24 @@ function RentalCard({ rental, isFavorite, onToggleFavorite, isOwner, onEdit, onD
 
         {showContacts && (
           <div className="mt-3 pt-3 border-t dark:border-gray-700 space-y-2">
-            {rental.contact?.phone && (
+            {contactPhone && (
               <a
-                href={`tel:${rental.contact.phone}`}
+                href={`tel:${contactPhone}`}
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600"
               >
                 <Phone className="w-4 h-4" />
-                {rental.contact.phone}
+                {contactPhone}
               </a>
             )}
-            {rental.contact?.telegram && (
+            {contactTelegram && (
               <a
-                href={`https://t.me/${rental.contact.telegram.replace('@', '')}`}
+                href={`https://t.me/${contactTelegram.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600"
               >
                 <MessageCircle className="w-4 h-4" />
-                {rental.contact.telegram}
+                {contactTelegram}
               </a>
             )}
           </div>
@@ -659,8 +664,36 @@ export function RentalPage({ onNavigate }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [userRentals, setUserRentals] = useState(() => loadFromStorage('rental-items', []));
+  const [userRentals, setUserRentals] = useState([]);
   const [favorites, setFavorites] = useState(() => loadFromStorage('rental-favorites', []));
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load listings from Supabase or localStorage
+  useEffect(() => {
+    loadListings();
+  }, [user]);
+
+  const loadListings = async () => {
+    setIsLoading(true);
+    try {
+      if (isBackendReady && supabase) {
+        const { data, error } = await getListings('rentals');
+        if (error) {
+          console.error('Error loading rentals from Supabase:', error);
+          setUserRentals(loadFromStorage('rental-items', []));
+        } else {
+          setUserRentals(data || []);
+        }
+      } else {
+        setUserRentals(loadFromStorage('rental-items', []));
+      }
+    } catch (err) {
+      console.error('Error loading listings:', err);
+      setUserRentals(loadFromStorage('rental-items', []));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Check for item to edit from profile page
   useEffect(() => {
@@ -668,12 +701,12 @@ export function RentalPage({ onNavigate }) {
     if (editingData && editingData.type === 'rental' && editingData.item) {
       setEditingRental(editingData.item);
       setShowAddForm(true);
-      saveToStorage('editing-item', null); // Clear after use
+      saveToStorage('editing-item', null);
     }
   }, []);
 
   const allRentals = [...userRentals, ...mockRentals].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
   );
 
   const filteredRentals = allRentals.filter(rental => {
@@ -691,22 +724,70 @@ export function RentalPage({ onNavigate }) {
     }
   };
 
-  const handleAddRental = (rental) => {
-    const existingIndex = userRentals.findIndex(r => r.id === rental.id);
-    let updated;
-    if (existingIndex >= 0) {
-      updated = [...userRentals];
-      updated[existingIndex] = rental;
+  const handleAddRental = async (rental) => {
+    if (isBackendReady && supabase && user) {
+      try {
+        const supabaseData = {
+          user_id: user.id,
+          title: rental.title,
+          description: rental.description,
+          price: rental.price || 0,
+          rental_type: rental.category,
+          city: rental.city,
+          images: rental.images || [],
+          contact_phone: rental.contact?.phone || '',
+          contact_telegram: rental.contact?.telegram || '',
+          status: 'active',
+        };
+
+        if (rental.id && !rental.id.toString().startsWith('local-')) {
+          const { error } = await updateListing('rentals', rental.id, supabaseData);
+          if (error) {
+            alert('Помилка оновлення: ' + error.message);
+            return;
+          }
+        } else {
+          const { error } = await createListing('rentals', supabaseData);
+          if (error) {
+            alert('Помилка створення: ' + error.message);
+            return;
+          }
+        }
+        await loadListings();
+      } catch (err) {
+        console.error('Error saving rental:', err);
+        alert('Помилка збереження');
+      }
     } else {
-      updated = [rental, ...userRentals];
+      const existingIndex = userRentals.findIndex(r => r.id === rental.id);
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...userRentals];
+        updated[existingIndex] = rental;
+      } else {
+        updated = [rental, ...userRentals];
+      }
+      setUserRentals(updated);
+      saveToStorage('rental-items', updated);
     }
-    setUserRentals(updated);
-    saveToStorage('rental-items', updated);
     setEditingRental(null);
   };
 
-  const handleDeleteRental = (rentalId) => {
-    if (confirm('Видалити це оголошення?')) {
+  const handleDeleteRental = async (rentalId) => {
+    if (!confirm('Видалити це оголошення?')) return;
+
+    if (isBackendReady && supabase && user) {
+      try {
+        const { error } = await deleteListing('rentals', rentalId);
+        if (error) {
+          alert('Помилка видалення: ' + error.message);
+          return;
+        }
+        await loadListings();
+      } catch (err) {
+        console.error('Error deleting rental:', err);
+      }
+    } else {
       const updated = userRentals.filter(r => r.id !== rentalId);
       setUserRentals(updated);
       saveToStorage('rental-items', updated);
@@ -727,9 +808,8 @@ export function RentalPage({ onNavigate }) {
   };
 
   const isOwner = (rental) => {
-    if (!rental.isUserItem) return false;
-    const currentUserId = user?.id || getLocalUserId();
-    return rental.userId === currentUserId;
+    if (!user) return false;
+    return rental.user_id === user.id || rental.userId === user.id;
   };
 
   return (
