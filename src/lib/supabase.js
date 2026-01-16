@@ -3,14 +3,37 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create a mock client if env variables are missing (for development)
-const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+export const isBackendReady = !!(supabaseUrl && supabaseAnonKey);
 
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+// Lazy initialization - don't block app startup
+let _supabaseInstance = null;
+let _initPromise = null;
 
-export const isBackendReady = isSupabaseConfigured;
+const initSupabase = () => {
+  if (_supabaseInstance) return _supabaseInstance;
+
+  _supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    }
+  });
+  return _supabaseInstance;
+};
+
+// Get supabase instance - initializes on first call
+export const getSupabase = () => {
+  if (!isBackendReady) return null;
+  return initSupabase();
+};
+
+// For backwards compatibility - lazy getter
+export const supabase = isBackendReady ? {
+  get auth() { return getSupabase().auth; },
+  from: (table) => getSupabase().from(table),
+  storage: { get from() { return (bucket) => getSupabase().storage.from(bucket); } },
+} : null;
 
 // Auth helpers
 export const getCurrentUser = async () => {
