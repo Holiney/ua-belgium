@@ -106,17 +106,22 @@ export function ProfilePage({ onNavigate }) {
 
   const handleSignOut = async () => {
     if (confirm('Ви впевнені, що хочете вийти?')) {
+      console.log('[ProfilePage] SignOut started');
       try {
-        await signOut();
+        console.log('[ProfilePage] Calling signOut...');
+        const result = await signOut();
+        console.log('[ProfilePage] SignOut result:', result);
         // Clear local storage but keep theme preference
         const theme = localStorage.getItem('theme');
+        console.log('[ProfilePage] Clearing localStorage...');
         localStorage.clear();
         if (theme) localStorage.setItem('theme', theme);
-        // Reload page to reset state
-        window.location.reload();
+        console.log('[ProfilePage] Reloading page...');
+        // Force reload
+        window.location.href = window.location.origin;
       } catch (err) {
-        console.error('Signout error:', err);
-        alert('Помилка виходу. Спробуйте ще раз.');
+        console.error('[ProfilePage] Signout error:', err);
+        alert('Помилка виходу: ' + err.message);
       }
     }
   };
