@@ -570,38 +570,44 @@ export function RentalPage({ onNavigate }) {
   // Initialize from cache immediately for instant display
   const [userRentals, setUserRentals] = useState(() => loadFromStorage('rental-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('rental-favorites', []));
-  // Only show loading if cache is empty
-  const [isLoading, setIsLoading] = useState(() => loadFromStorage('rental-items', []).length === 0);
+  // Never show loading - always display cache first
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load listings once on mount - refresh from server in background
+  // Background sync with Supabase - delayed to not block render
   useEffect(() => {
-    loadListings();
+    if (!isBackendReady || !supabase) return;
+
+    // Small delay to let UI render first with cached data
+    const timer = setTimeout(() => {
+      syncFromServer();
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  const loadListings = async () => {
-    const cached = loadFromStorage('rental-items', []);
-    // Only show loading spinner if no cached data
-    if (cached.length === 0) {
-      setIsLoading(true);
-    }
+  const syncFromServer = async () => {
     try {
-      if (isBackendReady && supabase) {
-        const { data, error } = await getListings('rentals');
-        if (error) {
-          console.error('Error loading rentals from Supabase:', error);
-          // Keep cached data on error
-        } else {
-          const listings = data || [];
-          setUserRentals(listings);
-          // Update cache
-          saveToStorage('rental-items', listings);
-        }
+      const { data, error } = await getListings('rentals');
+      if (!error && data) {
+        setUserRentals(data);
+        saveToStorage('rental-items', data);
+      }
+    } catch (err) {
+      console.error('Error syncing rentals:', err);
+    }
+  };
+
+  // Force refresh (called after add/edit/delete)
+  const loadListings = async () => {
+    if (!isBackendReady || !supabase) return;
+    try {
+      const { data, error } = await getListings('rentals');
+      if (!error && data) {
+        setUserRentals(data);
+        saveToStorage('rental-items', data);
       }
     } catch (err) {
       console.error('Error loading listings:', err);
-      // Keep cached data on error
-    } finally {
-      setIsLoading(false);
     }
   };
 

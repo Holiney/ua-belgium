@@ -511,38 +511,44 @@ export function FoodPage({ onNavigate }) {
   // Initialize from cache immediately for instant display
   const [userItems, setUserItems] = useState(() => loadFromStorage('food-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('food-favorites', []));
-  // Only show loading if cache is empty
-  const [isLoading, setIsLoading] = useState(() => loadFromStorage('food-items', []).length === 0);
+  // Never show loading - always display cache first
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load listings once on mount - refresh from server in background
+  // Background sync with Supabase - delayed to not block render
   useEffect(() => {
-    loadListings();
+    if (!isBackendReady || !supabase) return;
+
+    // Small delay to let UI render first with cached data
+    const timer = setTimeout(() => {
+      syncFromServer();
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  const loadListings = async () => {
-    const cached = loadFromStorage('food-items', []);
-    // Only show loading spinner if no cached data
-    if (cached.length === 0) {
-      setIsLoading(true);
-    }
+  const syncFromServer = async () => {
     try {
-      if (isBackendReady && supabase) {
-        const { data, error } = await getListings('food');
-        if (error) {
-          console.error('Error loading food from Supabase:', error);
-          // Keep cached data on error
-        } else {
-          const listings = data || [];
-          setUserItems(listings);
-          // Update cache
-          saveToStorage('food-items', listings);
-        }
+      const { data, error } = await getListings('food');
+      if (!error && data) {
+        setUserItems(data);
+        saveToStorage('food-items', data);
+      }
+    } catch (err) {
+      console.error('Error syncing food:', err);
+    }
+  };
+
+  // Force refresh (called after add/edit/delete)
+  const loadListings = async () => {
+    if (!isBackendReady || !supabase) return;
+    try {
+      const { data, error } = await getListings('food');
+      if (!error && data) {
+        setUserItems(data);
+        saveToStorage('food-items', data);
       }
     } catch (err) {
       console.error('Error loading listings:', err);
-      // Keep cached data on error
-    } finally {
-      setIsLoading(false);
     }
   };
 

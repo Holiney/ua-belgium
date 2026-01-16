@@ -587,38 +587,44 @@ export function ProductsPage({ onNavigate }) {
   // Initialize from cache immediately for instant display
   const [userProducts, setUserProducts] = useState(() => loadFromStorage('products-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('products-favorites', []));
-  // Only show loading if cache is empty
-  const [isLoading, setIsLoading] = useState(() => loadFromStorage('products-items', []).length === 0);
+  // Never show loading - always display cache first
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load listings once on mount - refresh from server in background
+  // Background sync with Supabase - delayed to not block render
   useEffect(() => {
-    loadListings();
+    if (!isBackendReady || !supabase) return;
+
+    // Small delay to let UI render first with cached data
+    const timer = setTimeout(() => {
+      syncFromServer();
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  const loadListings = async () => {
-    const cached = loadFromStorage('products-items', []);
-    // Only show loading spinner if no cached data
-    if (cached.length === 0) {
-      setIsLoading(true);
-    }
+  const syncFromServer = async () => {
     try {
-      if (isBackendReady && supabase) {
-        const { data, error } = await getListings('products');
-        if (error) {
-          console.error('[ProductsPage] Supabase error:', error);
-          // Keep cached data on error
-        } else {
-          const listings = data || [];
-          setUserProducts(listings);
-          // Update cache
-          saveToStorage('products-items', listings);
-        }
+      const { data, error } = await getListings('products');
+      if (!error && data) {
+        setUserProducts(data);
+        saveToStorage('products-items', data);
       }
     } catch (err) {
-      console.error('[ProductsPage] Exception:', err);
-      // Keep cached data on error
-    } finally {
-      setIsLoading(false);
+      console.error('Error syncing products:', err);
+    }
+  };
+
+  // Force refresh (called after add/edit/delete)
+  const loadListings = async () => {
+    if (!isBackendReady || !supabase) return;
+    try {
+      const { data, error } = await getListings('products');
+      if (!error && data) {
+        setUserProducts(data);
+        saveToStorage('products-items', data);
+      }
+    } catch (err) {
+      console.error('Error loading listings:', err);
     }
   };
 
