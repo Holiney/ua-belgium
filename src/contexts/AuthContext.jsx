@@ -168,18 +168,33 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    console.log('[AuthContext] signOut called');
+    console.log('[AuthContext] isBackendReady:', isBackendReady);
+    console.log('[AuthContext] supabase:', !!supabase);
+
     if (!isBackendReady || !supabase) {
+      console.log('[AuthContext] No backend, clearing state locally');
       setUser(null);
       setProfile(null);
       return { error: null };
     }
 
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
+    try {
+      console.log('[AuthContext] Calling supabase.auth.signOut...');
+      const { error } = await supabase.auth.signOut();
+      console.log('[AuthContext] signOut result:', { error });
+
+      // Always clear state regardless of error
       setUser(null);
       setProfile(null);
+
+      return { error };
+    } catch (err) {
+      console.error('[AuthContext] signOut exception:', err);
+      setUser(null);
+      setProfile(null);
+      return { error: err };
     }
-    return { error };
   };
 
   const updateProfile = async (updates) => {

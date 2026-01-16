@@ -590,28 +590,33 @@ export function ProductsPage({ onNavigate }) {
 
   // Load listings once on mount
   useEffect(() => {
+    console.log('[ProductsPage] Mounting, loading listings...');
     loadListings();
   }, []);
 
   const loadListings = async () => {
+    console.log('[ProductsPage] loadListings called');
+    console.log('[ProductsPage] isBackendReady:', isBackendReady);
+    console.log('[ProductsPage] supabase:', !!supabase);
     setIsLoading(true);
     try {
       if (isBackendReady && supabase) {
-        // Load from Supabase
+        console.log('[ProductsPage] Fetching from Supabase...');
         const { data, error } = await getListings('products');
+        console.log('[ProductsPage] Result:', { dataLength: data?.length, error });
         if (error) {
-          console.error('Error loading products from Supabase:', error);
-          // Fallback to localStorage
+          console.error('[ProductsPage] Supabase error:', error);
           setUserProducts(loadFromStorage('products-items', []));
         } else {
+          console.log('[ProductsPage] Setting products:', data?.length);
           setUserProducts(data || []);
         }
       } else {
-        // Load from localStorage
+        console.log('[ProductsPage] Using localStorage');
         setUserProducts(loadFromStorage('products-items', []));
       }
     } catch (err) {
-      console.error('Error loading listings:', err);
+      console.error('[ProductsPage] Exception:', err);
       setUserProducts(loadFromStorage('products-items', []));
     } finally {
       setIsLoading(false);
