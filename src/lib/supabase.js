@@ -1,38 +1,89 @@
-import { createClient } from '@supabase/supabase-js';
-
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const isBackendReady = !!(supabaseUrl && supabaseAnonKey);
 
-// Lazy initialization - don't block app startup
+// Lazy initialization with dynamic import - don't block app startup
 let _supabaseInstance = null;
 let _initPromise = null;
 
-const initSupabase = () => {
+const initSupabase = async () => {
   if (_supabaseInstance) return _supabaseInstance;
+  if (_initPromise) return _initPromise;
 
-  _supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    }
-  });
-  return _supabaseInstance;
+  _initPromise = (async () => {
+    const { createClient } = await import('@supabase/supabase-js');
+    _supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      }
+    });
+    return _supabaseInstance;
+  })();
+
+  return _initPromise;
 };
 
-// Get supabase instance - initializes on first call
-export const getSupabase = () => {
+// Get supabase instance - async now
+export const getSupabaseAsync = async () => {
   if (!isBackendReady) return null;
   return initSupabase();
 };
 
-// For backwards compatibility - lazy getter
+// Synchronous getter - returns null if not yet initialized
+export const getSupabase = () => {
+  if (!isBackendReady) return null;
+  return _supabaseInstance;
+};
+
+// Start loading supabase in background immediately (but non-blocking)
+if (isBackendReady) {
+  // Use setTimeout to not block initial render
+  setTimeout(() => initSupabase(), 0);
+}
+
+// For backwards compatibility - async proxy
 export const supabase = isBackendReady ? {
-  get auth() { return getSupabase().auth; },
-  from: (table) => getSupabase().from(table),
-  storage: { get from() { return (bucket) => getSupabase().storage.from(bucket); } },
+  get auth() {
+    if (!_supabaseInstance) {
+      console.warn('Supabase not yet initialized, returning dummy auth');
+      return {
+        getSession: async () => ({ data: { session: null } }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signOut: async () => ({ error: null }),
+        signInWithOtp: async () => ({ error: new Error('Not ready') }),
+        verifyOtp: async () => ({ error: new Error('Not ready') }),
+        signInWithPassword: async () => ({ error: new Error('Not ready') }),
+      };
+    }
+    return _supabaseInstance.auth;
+  },
+  from: (table) => {
+    if (!_supabaseInstance) {
+      return {
+        select: () => ({ data: [], error: null }),
+        insert: () => ({ data: null, error: new Error('Not ready') }),
+        update: () => ({ data: null, error: new Error('Not ready') }),
+        delete: () => ({ error: new Error('Not ready') }),
+      };
+    }
+    return _supabaseInstance.from(table);
+  },
+  get storage() {
+    return {
+      from: (bucket) => {
+        if (!_supabaseInstance) {
+          return {
+            upload: async () => ({ error: new Error('Not ready') }),
+            getPublicUrl: () => ({ data: { publicUrl: '' } }),
+          };
+        }
+        return _supabaseInstance.storage.from(bucket);
+      }
+    };
+  },
 } : null;
 
 // Auth helpers
