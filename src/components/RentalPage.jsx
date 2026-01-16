@@ -571,10 +571,10 @@ export function RentalPage({ onNavigate }) {
   const [favorites, setFavorites] = useState(() => loadFromStorage('rental-favorites', []));
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load listings from Supabase or localStorage
+  // Load listings once on mount
   useEffect(() => {
     loadListings();
-  }, [user]);
+  }, []);
 
   const loadListings = async () => {
     setIsLoading(true);

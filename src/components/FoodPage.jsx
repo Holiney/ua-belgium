@@ -512,10 +512,10 @@ export function FoodPage({ onNavigate }) {
   const [favorites, setFavorites] = useState(() => loadFromStorage('food-favorites', []));
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load listings from Supabase or localStorage
+  // Load listings once on mount
   useEffect(() => {
     loadListings();
-  }, [user]);
+  }, []);
 
   const loadListings = async () => {
     setIsLoading(true);
