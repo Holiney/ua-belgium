@@ -567,36 +567,39 @@ export function RentalPage({ onNavigate }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [userRentals, setUserRentals] = useState([]);
+  // Initialize from cache immediately for instant display
+  const [userRentals, setUserRentals] = useState(() => loadFromStorage('rental-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('rental-favorites', []));
-  const [isLoading, setIsLoading] = useState(true);
+  // Only show loading if cache is empty
+  const [isLoading, setIsLoading] = useState(() => loadFromStorage('rental-items', []).length === 0);
 
-  // Load listings once on mount
+  // Load listings once on mount - refresh from server in background
   useEffect(() => {
     loadListings();
   }, []);
 
   const loadListings = async () => {
-    setIsLoading(true);
+    const cached = loadFromStorage('rental-items', []);
+    // Only show loading spinner if no cached data
+    if (cached.length === 0) {
+      setIsLoading(true);
+    }
     try {
       if (isBackendReady && supabase) {
         const { data, error } = await getListings('rentals');
         if (error) {
           console.error('Error loading rentals from Supabase:', error);
-          // Fallback to cache
-          setUserRentals(loadFromStorage('rental-items', []));
+          // Keep cached data on error
         } else {
           const listings = data || [];
           setUserRentals(listings);
-          // Cache for offline/reload persistence
+          // Update cache
           saveToStorage('rental-items', listings);
         }
-      } else {
-        setUserRentals(loadFromStorage('rental-items', []));
       }
     } catch (err) {
       console.error('Error loading listings:', err);
-      setUserRentals(loadFromStorage('rental-items', []));
+      // Keep cached data on error
     } finally {
       setIsLoading(false);
     }

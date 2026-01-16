@@ -508,36 +508,39 @@ export function FoodPage({ onNavigate }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [userItems, setUserItems] = useState([]);
+  // Initialize from cache immediately for instant display
+  const [userItems, setUserItems] = useState(() => loadFromStorage('food-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('food-favorites', []));
-  const [isLoading, setIsLoading] = useState(true);
+  // Only show loading if cache is empty
+  const [isLoading, setIsLoading] = useState(() => loadFromStorage('food-items', []).length === 0);
 
-  // Load listings once on mount
+  // Load listings once on mount - refresh from server in background
   useEffect(() => {
     loadListings();
   }, []);
 
   const loadListings = async () => {
-    setIsLoading(true);
+    const cached = loadFromStorage('food-items', []);
+    // Only show loading spinner if no cached data
+    if (cached.length === 0) {
+      setIsLoading(true);
+    }
     try {
       if (isBackendReady && supabase) {
         const { data, error } = await getListings('food');
         if (error) {
           console.error('Error loading food from Supabase:', error);
-          // Fallback to cache
-          setUserItems(loadFromStorage('food-items', []));
+          // Keep cached data on error
         } else {
           const listings = data || [];
           setUserItems(listings);
-          // Cache for offline/reload persistence
+          // Update cache
           saveToStorage('food-items', listings);
         }
-      } else {
-        setUserItems(loadFromStorage('food-items', []));
       }
     } catch (err) {
       console.error('Error loading listings:', err);
-      setUserItems(loadFromStorage('food-items', []));
+      // Keep cached data on error
     } finally {
       setIsLoading(false);
     }

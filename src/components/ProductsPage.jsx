@@ -584,44 +584,39 @@ export function ProductsPage({ onNavigate }) {
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [userProducts, setUserProducts] = useState([]);
+  // Initialize from cache immediately for instant display
+  const [userProducts, setUserProducts] = useState(() => loadFromStorage('products-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('products-favorites', []));
-  const [isLoading, setIsLoading] = useState(true);
+  // Only show loading if cache is empty
+  const [isLoading, setIsLoading] = useState(() => loadFromStorage('products-items', []).length === 0);
 
-  // Load listings once on mount
+  // Load listings once on mount - refresh from server in background
   useEffect(() => {
-    console.log('[ProductsPage] Mounting, loading listings...');
     loadListings();
   }, []);
 
   const loadListings = async () => {
-    console.log('[ProductsPage] loadListings called');
-    console.log('[ProductsPage] isBackendReady:', isBackendReady);
-    console.log('[ProductsPage] supabase:', !!supabase);
-    setIsLoading(true);
+    const cached = loadFromStorage('products-items', []);
+    // Only show loading spinner if no cached data
+    if (cached.length === 0) {
+      setIsLoading(true);
+    }
     try {
       if (isBackendReady && supabase) {
-        console.log('[ProductsPage] Fetching from Supabase...');
         const { data, error } = await getListings('products');
-        console.log('[ProductsPage] Result:', { dataLength: data?.length, error });
         if (error) {
           console.error('[ProductsPage] Supabase error:', error);
-          // Fallback to cache
-          setUserProducts(loadFromStorage('products-items', []));
+          // Keep cached data on error
         } else {
-          console.log('[ProductsPage] Setting products:', data?.length);
           const listings = data || [];
           setUserProducts(listings);
-          // Cache for offline/reload persistence
+          // Update cache
           saveToStorage('products-items', listings);
         }
-      } else {
-        console.log('[ProductsPage] Using localStorage');
-        setUserProducts(loadFromStorage('products-items', []));
       }
     } catch (err) {
       console.error('[ProductsPage] Exception:', err);
-      setUserProducts(loadFromStorage('products-items', []));
+      // Keep cached data on error
     } finally {
       setIsLoading(false);
     }
