@@ -606,10 +606,14 @@ export function ProductsPage({ onNavigate }) {
         console.log('[ProductsPage] Result:', { dataLength: data?.length, error });
         if (error) {
           console.error('[ProductsPage] Supabase error:', error);
+          // Fallback to cache
           setUserProducts(loadFromStorage('products-items', []));
         } else {
           console.log('[ProductsPage] Setting products:', data?.length);
-          setUserProducts(data || []);
+          const listings = data || [];
+          setUserProducts(listings);
+          // Cache for offline/reload persistence
+          saveToStorage('products-items', listings);
         }
       } else {
         console.log('[ProductsPage] Using localStorage');

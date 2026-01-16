@@ -1,11 +1,17 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, getProfile, isBackendReady } from '../lib/supabase';
+import { loadFromStorage, saveToStorage } from '../utils/storage';
 
 const AuthContext = createContext({});
 
+// Keys for localStorage
+const PROFILE_CACHE_KEY = 'cached-user-profile';
+const USER_CACHE_KEY = 'cached-user';
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  // Initialize from cache for instant display
+  const [user, setUser] = useState(() => loadFromStorage(USER_CACHE_KEY, null));
+  const [profile, setProfile] = useState(() => loadFromStorage(PROFILE_CACHE_KEY, null));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,11 +38,15 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[AuthContext] Auth state changed:', event);
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);
         } else {
+          // Clear profile and cache when signed out
           setProfile(null);
+          saveToStorage(USER_CACHE_KEY, null);
+          saveToStorage(PROFILE_CACHE_KEY, null);
         }
         setLoading(false);
       }
@@ -56,13 +66,29 @@ export function AuthProvider({ children }) {
       }
       if (data) {
         setProfile(data);
+        // Cache profile for persistence across page reloads
+        saveToStorage(PROFILE_CACHE_KEY, data);
       }
     } catch (err) {
       console.error('Error loading profile:', err);
+      // Keep cached profile if loading fails
     } finally {
       setLoading(false);
     }
   };
+
+  // Cache user when it changes
+  useEffect(() => {
+    if (user) {
+      // Cache minimal user data (id, email, phone)
+      const userCache = {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+      };
+      saveToStorage(USER_CACHE_KEY, userCache);
+    }
+  }, [user]);
 
   // Send OTP to phone number
   const sendOtp = async (phone) => {
@@ -172,10 +198,17 @@ export function AuthProvider({ children }) {
     console.log('[AuthContext] isBackendReady:', isBackendReady);
     console.log('[AuthContext] supabase:', !!supabase);
 
-    if (!isBackendReady || !supabase) {
-      console.log('[AuthContext] No backend, clearing state locally');
+    // Clear cache immediately
+    const clearLocalState = () => {
       setUser(null);
       setProfile(null);
+      saveToStorage(USER_CACHE_KEY, null);
+      saveToStorage(PROFILE_CACHE_KEY, null);
+    };
+
+    if (!isBackendReady || !supabase) {
+      console.log('[AuthContext] No backend, clearing state locally');
+      clearLocalState();
       return { error: null };
     }
 
@@ -185,14 +218,12 @@ export function AuthProvider({ children }) {
       console.log('[AuthContext] signOut result:', { error });
 
       // Always clear state regardless of error
-      setUser(null);
-      setProfile(null);
+      clearLocalState();
 
       return { error };
     } catch (err) {
       console.error('[AuthContext] signOut exception:', err);
-      setUser(null);
-      setProfile(null);
+      clearLocalState();
       return { error: err };
     }
   };
@@ -211,6 +242,8 @@ export function AuthProvider({ children }) {
 
       if (!error && data) {
         setProfile(data);
+        // Update cache
+        saveToStorage(PROFILE_CACHE_KEY, data);
       }
       return { data, error };
     } catch (err) {
