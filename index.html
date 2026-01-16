@@ -113,15 +113,17 @@
         });
       }
 
-      // Hide splash screen
+      // Hide splash screen immediately when React renders
+      window.hideSplash = () => {
+        const splash = document.getElementById('splash');
+        if (splash) {
+          splash.classList.add('hidden');
+          setTimeout(() => splash.remove(), 300);
+        }
+      };
+      // Fallback: hide after 100ms if React doesn't call hideSplash
       window.addEventListener('load', () => {
-        setTimeout(() => {
-          const splash = document.getElementById('splash');
-          if (splash) {
-            splash.classList.add('hidden');
-            setTimeout(() => splash.remove(), 500);
-          }
-        }, 800);
+        setTimeout(window.hideSplash, 100);
       });
 
       // PWA Install Prompt
