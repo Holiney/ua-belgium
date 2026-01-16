@@ -583,9 +583,13 @@ export function RentalPage({ onNavigate }) {
         const { data, error } = await getListings('rentals');
         if (error) {
           console.error('Error loading rentals from Supabase:', error);
+          // Fallback to cache
           setUserRentals(loadFromStorage('rental-items', []));
         } else {
-          setUserRentals(data || []);
+          const listings = data || [];
+          setUserRentals(listings);
+          // Cache for offline/reload persistence
+          saveToStorage('rental-items', listings);
         }
       } else {
         setUserRentals(loadFromStorage('rental-items', []));

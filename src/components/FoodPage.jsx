@@ -524,9 +524,13 @@ export function FoodPage({ onNavigate }) {
         const { data, error } = await getListings('food');
         if (error) {
           console.error('Error loading food from Supabase:', error);
+          // Fallback to cache
           setUserItems(loadFromStorage('food-items', []));
         } else {
-          setUserItems(data || []);
+          const listings = data || [];
+          setUserItems(listings);
+          // Cache for offline/reload persistence
+          saveToStorage('food-items', listings);
         }
       } else {
         setUserItems(loadFromStorage('food-items', []));
