@@ -12,29 +12,37 @@ export function AuthProvider({ children }) {
   // Initialize from cache for instant display
   const [user, setUser] = useState(() => loadFromStorage(USER_CACHE_KEY, null));
   const [profile, setProfile] = useState(() => loadFromStorage(PROFILE_CACHE_KEY, null));
-  const [loading, setLoading] = useState(true);
+  // Don't block render - start with false if we have cached data
+  const cachedUser = loadFromStorage(USER_CACHE_KEY, null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isBackendReady || !supabase) {
-      setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
+    // Background sync with Supabase - don't block UI
+    const syncAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+          // Load profile in background
+          loadProfile(session.user.id);
+        } else if (cachedUser) {
+          // Session expired but we have cache - clear it
+          setUser(null);
+          setProfile(null);
+          saveToStorage(USER_CACHE_KEY, null);
+          saveToStorage(PROFILE_CACHE_KEY, null);
+        }
+      } catch (err) {
+        console.error('Error getting session:', err);
       }
-    }).catch((err) => {
-      console.error('Error getting session:', err);
-      setLoading(false);
-    });
+    };
 
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
+    // Start sync after small delay to not block initial render
+    const syncTimeout = setTimeout(syncAuth, 100);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -48,13 +56,12 @@ export function AuthProvider({ children }) {
           saveToStorage(USER_CACHE_KEY, null);
           saveToStorage(PROFILE_CACHE_KEY, null);
         }
-        setLoading(false);
       }
     );
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(timeout);
+      clearTimeout(syncTimeout);
     };
   }, []);
 
@@ -72,8 +79,6 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error('Error loading profile:', err);
       // Keep cached profile if loading fails
-    } finally {
-      setLoading(false);
     }
   };
 
