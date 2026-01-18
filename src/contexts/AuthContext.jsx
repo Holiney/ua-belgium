@@ -41,17 +41,15 @@ export function AuthProvider({ children }) {
       }
     };
 
-    // Start sync after small delay to not block initial render
-    const syncTimeout = setTimeout(syncAuth, 100);
+    // Start sync immediately (async, doesn't block)
+    syncAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AuthContext] Auth state changed:', event);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await loadProfile(session.user.id);
+          loadProfile(session.user.id);
         } else {
-          // Clear profile and cache when signed out
           setProfile(null);
           saveToStorage(USER_CACHE_KEY, null);
           saveToStorage(PROFILE_CACHE_KEY, null);
@@ -61,7 +59,6 @@ export function AuthProvider({ children }) {
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(syncTimeout);
     };
   }, []);
 
