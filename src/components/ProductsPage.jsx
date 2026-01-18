@@ -590,16 +590,10 @@ export function ProductsPage({ onNavigate }) {
   // Never show loading - always display cache first
   const [isLoading, setIsLoading] = useState(false);
 
-  // Background sync with Supabase - delayed to not block render
+  // Background sync with Supabase - no delay, runs async
   useEffect(() => {
     if (!isBackendReady || !supabase) return;
-
-    // Small delay to let UI render first with cached data
-    const timer = setTimeout(() => {
-      syncFromServer();
-    }, 300);
-
-    return () => clearTimeout(timer);
+    syncFromServer();
   }, []);
 
   const syncFromServer = async () => {
