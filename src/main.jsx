@@ -18,8 +18,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
   </React.StrictMode>
 );
-
-// Hide splash screen immediately after React mounts
-if (typeof window.hideSplash === 'function') {
-  window.hideSplash();
-}
