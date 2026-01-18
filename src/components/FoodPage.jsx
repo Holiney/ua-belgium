@@ -3,7 +3,8 @@ import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Clock, Image, Che
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, isBackendReady, createListing, updateListing, deleteListing, getListings } from '../lib/supabase';
+import { supabase, isBackendReady, createListing, updateListing, deleteListing } from '../lib/supabase';
+import { useListings } from '../hooks/useListings';
 
 // Get or create local user ID for anonymous users
 function getLocalUserId() {
@@ -508,43 +509,12 @@ export function FoodPage({ onNavigate }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  // Initialize from cache immediately for instant display
-  const [userItems, setUserItems] = useState(() => loadFromStorage('food-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('food-favorites', []));
-  // Never show loading - always display cache first
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Background sync with Supabase - no delay, runs async
-  useEffect(() => {
-    if (!isBackendReady || !supabase) return;
-    syncFromServer();
-  }, []);
+  // SWR for instant cache + background refresh
+  const { listings: userItems, isLoading, refresh } = useListings('food');
 
-  const syncFromServer = async () => {
-    try {
-      const { data, error } = await getListings('food');
-      if (!error && data) {
-        setUserItems(data);
-        saveToStorage('food-items', data);
-      }
-    } catch (err) {
-      console.error('Error syncing food:', err);
-    }
-  };
-
-  // Force refresh (called after add/edit/delete)
-  const loadListings = async () => {
-    if (!isBackendReady || !supabase) return;
-    try {
-      const { data, error } = await getListings('food');
-      if (!error && data) {
-        setUserItems(data);
-        saveToStorage('food-items', data);
-      }
-    } catch (err) {
-      console.error('Error loading listings:', err);
-    }
-  };
+  const loadListings = refresh;
 
   // Check for item to edit from profile page
   useEffect(() => {
@@ -608,6 +578,7 @@ export function FoodPage({ onNavigate }) {
         throw err;
       }
     } else {
+      // Offline mode - update localStorage and refresh cache
       const existingIndex = userItems.findIndex(i => i.id === item.id);
       let updated;
       if (existingIndex >= 0) {
@@ -616,8 +587,8 @@ export function FoodPage({ onNavigate }) {
       } else {
         updated = [item, ...userItems];
       }
-      setUserItems(updated);
       saveToStorage('food-items', updated);
+      refresh(updated, false); // Update SWR cache without revalidation
     }
     setEditingItem(null);
   };
@@ -637,9 +608,10 @@ export function FoodPage({ onNavigate }) {
         console.error('Error deleting food:', err);
       }
     } else {
+      // Offline mode - update localStorage and refresh cache
       const updated = userItems.filter(i => i.id !== itemId);
-      setUserItems(updated);
       saveToStorage('food-items', updated);
+      refresh(updated, false); // Update SWR cache without revalidation
     }
   };
 
