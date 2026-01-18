@@ -1,17 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Header, BottomNav, PageContainer } from './components/Layout';
 import { HomePage } from './components/HomePage';
-import { GuidesPage, CategoryPage, ArticlePage } from './components/GuidesPage';
-import { ServicesPage, ServiceProfilePage } from './components/ServicesPage';
-import { ProductsPage } from './components/ProductsPage';
-import { FoodPage } from './components/FoodPage';
-import { RentalPage } from './components/RentalPage';
-import { FavoritesPage } from './components/FavoritesPage';
-import { ProfilePage } from './components/ProfilePage';
-import { NewsPage, NewsDetailPage } from './components/NewsPage';
-import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { loadFromStorage, saveToStorage } from './utils/storage';
+
+// Lazy load pages for faster initial load
+const GuidesPage = lazy(() => import('./components/GuidesPage').then(m => ({ default: m.GuidesPage })));
+const CategoryPage = lazy(() => import('./components/GuidesPage').then(m => ({ default: m.CategoryPage })));
+const ArticlePage = lazy(() => import('./components/GuidesPage').then(m => ({ default: m.ArticlePage })));
+const ServicesPage = lazy(() => import('./components/ServicesPage').then(m => ({ default: m.ServicesPage })));
+const ServiceProfilePage = lazy(() => import('./components/ServicesPage').then(m => ({ default: m.ServiceProfilePage })));
+const ProductsPage = lazy(() => import('./components/ProductsPage').then(m => ({ default: m.ProductsPage })));
+const FoodPage = lazy(() => import('./components/FoodPage').then(m => ({ default: m.FoodPage })));
+const RentalPage = lazy(() => import('./components/RentalPage').then(m => ({ default: m.RentalPage })));
+const FavoritesPage = lazy(() => import('./components/FavoritesPage').then(m => ({ default: m.FavoritesPage })));
+const ProfilePage = lazy(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const NewsPage = lazy(() => import('./components/NewsPage').then(m => ({ default: m.NewsPage })));
+const NewsDetailPage = lazy(() => import('./components/NewsPage').then(m => ({ default: m.NewsDetailPage })));
+const PWAInstallBanner = lazy(() => import('./components/PWAInstallBanner').then(m => ({ default: m.PWAInstallBanner })));
+
+// Simple loading fallback
+const PageLoader = () => null;
 
 // Component to handle Telegram auth redirect
 function TelegramAuthHandler() {
@@ -188,7 +197,9 @@ export default function App() {
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      <PWAInstallBanner />
+      <Suspense fallback={<PageLoader />}>
+        <PWAInstallBanner />
+      </Suspense>
 
       <Header
         title={headerConfig.title}
@@ -200,73 +211,75 @@ export default function App() {
       />
 
       <PageContainer>
-        {page === 'home' && (
-          <HomePage onNavigate={navigate} />
-        )}
+        <Suspense fallback={<PageLoader />}>
+          {page === 'home' && (
+            <HomePage onNavigate={navigate} />
+          )}
 
-        {page === 'guides' && (
-          <GuidesPage onNavigate={navigate} />
-        )}
+          {page === 'guides' && (
+            <GuidesPage onNavigate={navigate} />
+          )}
 
-        {page === 'category' && (
-          <CategoryPage
-            categoryId={pageParams.categoryId}
-            onNavigate={navigate}
-            onBack={goBack}
-          />
-        )}
+          {page === 'category' && (
+            <CategoryPage
+              categoryId={pageParams.categoryId}
+              onNavigate={navigate}
+              onBack={goBack}
+            />
+          )}
 
-        {page === 'article' && (
-          <ArticlePage
-            articleId={pageParams.articleId}
-            onBack={goBack}
-          />
-        )}
+          {page === 'article' && (
+            <ArticlePage
+              articleId={pageParams.articleId}
+              onBack={goBack}
+            />
+          )}
 
-        {page === 'services' && (
-          <ServicesPage
-            onNavigate={navigate}
-            initialCategoryFilter={pageParams.categoryFilter}
-          />
-        )}
+          {page === 'services' && (
+            <ServicesPage
+              onNavigate={navigate}
+              initialCategoryFilter={pageParams.categoryFilter}
+            />
+          )}
 
-        {page === 'service' && (
-          <ServiceProfilePage
-            serviceId={pageParams.serviceId}
-            onBack={goBack}
-          />
-        )}
+          {page === 'service' && (
+            <ServiceProfilePage
+              serviceId={pageParams.serviceId}
+              onBack={goBack}
+            />
+          )}
 
-        {page === 'products' && (
-          <ProductsPage onNavigate={navigate} />
-        )}
+          {page === 'products' && (
+            <ProductsPage onNavigate={navigate} />
+          )}
 
-        {page === 'food' && (
-          <FoodPage onNavigate={navigate} />
-        )}
+          {page === 'food' && (
+            <FoodPage onNavigate={navigate} />
+          )}
 
-        {page === 'rental' && (
-          <RentalPage onNavigate={navigate} />
-        )}
+          {page === 'rental' && (
+            <RentalPage onNavigate={navigate} />
+          )}
 
-        {page === 'favorites' && (
-          <FavoritesPage />
-        )}
+          {page === 'favorites' && (
+            <FavoritesPage />
+          )}
 
-        {page === 'news' && (
-          <NewsPage onNavigate={navigate} />
-        )}
+          {page === 'news' && (
+            <NewsPage onNavigate={navigate} />
+          )}
 
-        {page === 'news-detail' && (
-          <NewsDetailPage
-            newsId={pageParams.newsId}
-            onBack={goBack}
-          />
-        )}
+          {page === 'news-detail' && (
+            <NewsDetailPage
+              newsId={pageParams.newsId}
+              onBack={goBack}
+            />
+          )}
 
-        {page === 'profile' && (
-          <ProfilePage onNavigate={navigate} />
-        )}
+          {page === 'profile' && (
+            <ProfilePage onNavigate={navigate} />
+          )}
+        </Suspense>
       </PageContainer>
 
       <BottomNav
