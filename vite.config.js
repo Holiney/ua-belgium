@@ -16,9 +16,19 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['lucide-react'],
+        manualChunks: (id) => {
+          // Supabase in separate chunk - critical for lazy loading
+          if (id.includes('@supabase') || id.includes('supabase')) {
+            return 'supabase';
+          }
+          // React core - needed immediately
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'react';
+          }
+          // Icons - can load slightly later
+          if (id.includes('lucide-react')) {
+            return 'icons';
+          }
         },
       },
     },
