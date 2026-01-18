@@ -3,7 +3,8 @@ import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar, I
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, isBackendReady, createListing, updateListing, deleteListing, getListings } from '../lib/supabase';
+import { supabase, isBackendReady, createListing, updateListing, deleteListing } from '../lib/supabase';
+import { useListings } from '../hooks/useListings';
 
 // Get or create local user ID for anonymous users
 function getLocalUserId() {
@@ -567,43 +568,12 @@ export function RentalPage({ onNavigate }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  // Initialize from cache immediately for instant display
-  const [userRentals, setUserRentals] = useState(() => loadFromStorage('rental-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('rental-favorites', []));
-  // Never show loading - always display cache first
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Background sync with Supabase - no delay, runs async
-  useEffect(() => {
-    if (!isBackendReady || !supabase) return;
-    syncFromServer();
-  }, []);
+  // SWR for instant cache + background refresh
+  const { listings: userRentals, isLoading, refresh } = useListings('rentals');
 
-  const syncFromServer = async () => {
-    try {
-      const { data, error } = await getListings('rentals');
-      if (!error && data) {
-        setUserRentals(data);
-        saveToStorage('rental-items', data);
-      }
-    } catch (err) {
-      console.error('Error syncing rentals:', err);
-    }
-  };
-
-  // Force refresh (called after add/edit/delete)
-  const loadListings = async () => {
-    if (!isBackendReady || !supabase) return;
-    try {
-      const { data, error } = await getListings('rentals');
-      if (!error && data) {
-        setUserRentals(data);
-        saveToStorage('rental-items', data);
-      }
-    } catch (err) {
-      console.error('Error loading listings:', err);
-    }
-  };
+  const loadListings = refresh;
 
   // Check for item to edit from profile page
   useEffect(() => {
@@ -667,6 +637,7 @@ export function RentalPage({ onNavigate }) {
         throw err;
       }
     } else {
+      // Offline mode - update localStorage and refresh cache
       const existingIndex = userRentals.findIndex(r => r.id === rental.id);
       let updated;
       if (existingIndex >= 0) {
@@ -675,8 +646,8 @@ export function RentalPage({ onNavigate }) {
       } else {
         updated = [rental, ...userRentals];
       }
-      setUserRentals(updated);
-      saveToStorage('rental-items', updated);
+      saveToStorage('rentals-items', updated);
+      refresh(updated, false); // Update SWR cache without revalidation
     }
     setEditingRental(null);
   };
@@ -696,9 +667,10 @@ export function RentalPage({ onNavigate }) {
         console.error('Error deleting rental:', err);
       }
     } else {
+      // Offline mode - update localStorage and refresh cache
       const updated = userRentals.filter(r => r.id !== rentalId);
-      setUserRentals(updated);
-      saveToStorage('rental-items', updated);
+      saveToStorage('rentals-items', updated);
+      refresh(updated, false); // Update SWR cache without revalidation
     }
   };
 

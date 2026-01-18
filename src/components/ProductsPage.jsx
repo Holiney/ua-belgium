@@ -3,7 +3,8 @@ import { Plus, X, Heart, MapPin, Phone, MessageCircle, Gift, Search, Image, Chev
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, isBackendReady, createListing, updateListing, deleteListing, getListings } from '../lib/supabase';
+import { supabase, isBackendReady, createListing, updateListing, deleteListing } from '../lib/supabase';
+import { useListings } from '../hooks/useListings';
 
 // Categories for products
 export const categories = [
@@ -584,43 +585,12 @@ export function ProductsPage({ onNavigate }) {
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  // Initialize from cache immediately for instant display
-  const [userProducts, setUserProducts] = useState(() => loadFromStorage('products-items', []));
   const [favorites, setFavorites] = useState(() => loadFromStorage('products-favorites', []));
-  // Never show loading - always display cache first
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Background sync with Supabase - no delay, runs async
-  useEffect(() => {
-    if (!isBackendReady || !supabase) return;
-    syncFromServer();
-  }, []);
+  // SWR for instant cache + background refresh
+  const { listings: userProducts, isLoading, refresh } = useListings('products');
 
-  const syncFromServer = async () => {
-    try {
-      const { data, error } = await getListings('products');
-      if (!error && data) {
-        setUserProducts(data);
-        saveToStorage('products-items', data);
-      }
-    } catch (err) {
-      console.error('Error syncing products:', err);
-    }
-  };
-
-  // Force refresh (called after add/edit/delete)
-  const loadListings = async () => {
-    if (!isBackendReady || !supabase) return;
-    try {
-      const { data, error } = await getListings('products');
-      if (!error && data) {
-        setUserProducts(data);
-        saveToStorage('products-items', data);
-      }
-    } catch (err) {
-      console.error('Error loading listings:', err);
-    }
-  };
+  const loadListings = refresh;
 
   // Check for item to edit from profile page
   useEffect(() => {
@@ -691,7 +661,7 @@ export function ProductsPage({ onNavigate }) {
         throw err;
       }
     } else {
-      // Save to localStorage as fallback
+      // Offline mode - update localStorage and refresh cache
       const existingIndex = userProducts.findIndex(p => p.id === product.id);
       let updated;
       if (existingIndex >= 0) {
@@ -700,8 +670,8 @@ export function ProductsPage({ onNavigate }) {
       } else {
         updated = [product, ...userProducts];
       }
-      setUserProducts(updated);
       saveToStorage('products-items', updated);
+      refresh(updated, false); // Update SWR cache without revalidation
     }
 
     setEditingProduct(null);
@@ -723,9 +693,10 @@ export function ProductsPage({ onNavigate }) {
         console.error('Error deleting product:', err);
       }
     } else {
+      // Offline mode - update localStorage and refresh cache
       const updated = userProducts.filter(p => p.id !== productId);
-      setUserProducts(updated);
       saveToStorage('products-items', updated);
+      refresh(updated, false); // Update SWR cache without revalidation
     }
   };
 
