@@ -3,16 +3,17 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const isBackendReady = !!(supabaseUrl && supabaseAnonKey);
 
-// Lazy initialization with dynamic import - don't block app startup
+// Supabase instance - initialized eagerly but non-blocking
 let _supabaseInstance = null;
 let _initPromise = null;
+let _isReady = false;
 
-const initSupabase = async () => {
-  if (_supabaseInstance) return _supabaseInstance;
+// Initialize Supabase EAGERLY (but still async to not block render)
+const initSupabase = () => {
+  if (_supabaseInstance) return Promise.resolve(_supabaseInstance);
   if (_initPromise) return _initPromise;
 
-  _initPromise = (async () => {
-    const { createClient } = await import('@supabase/supabase-js');
+  _initPromise = import('@supabase/supabase-js').then(({ createClient }) => {
     _supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
@@ -20,96 +21,127 @@ const initSupabase = async () => {
         detectSessionInUrl: false,
       }
     });
+    _isReady = true;
     return _supabaseInstance;
-  })();
+  });
 
   return _initPromise;
 };
 
-// Get supabase instance - async now
-export const getSupabaseAsync = async () => {
-  if (!isBackendReady) return null;
-  return initSupabase();
-};
-
-// Synchronous getter - returns null if not yet initialized
-export const getSupabase = () => {
-  if (!isBackendReady) return null;
-  return _supabaseInstance;
-};
-
-// Start loading supabase in background immediately (but non-blocking)
+// Start loading IMMEDIATELY (not in setTimeout)
 if (isBackendReady) {
-  // Use setTimeout to not block initial render
-  setTimeout(() => initSupabase(), 0);
+  initSupabase();
 }
 
-// For backwards compatibility - async proxy
-export const supabase = isBackendReady ? {
-  get auth() {
+// Wait for Supabase to be ready
+export const waitForSupabase = () => _initPromise || Promise.resolve(null);
+
+// Check if ready synchronously
+export const isSupabaseReady = () => _isReady;
+
+// Get instance (may be null if not ready)
+export const getSupabase = () => _supabaseInstance;
+
+// Backwards compatible proxy
+export const supabase = isBackendReady ? new Proxy({}, {
+  get(_, prop) {
     if (!_supabaseInstance) {
-      console.warn('Supabase not yet initialized, returning dummy auth');
-      return {
-        getSession: async () => ({ data: { session: null } }),
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-        signOut: async () => ({ error: null }),
-        signInWithOtp: async () => ({ error: new Error('Not ready') }),
-        verifyOtp: async () => ({ error: new Error('Not ready') }),
-        signInWithPassword: async () => ({ error: new Error('Not ready') }),
-      };
-    }
-    return _supabaseInstance.auth;
-  },
-  from: (table) => {
-    if (!_supabaseInstance) {
-      return {
-        select: () => ({ data: [], error: null }),
-        insert: () => ({ data: null, error: new Error('Not ready') }),
-        update: () => ({ data: null, error: new Error('Not ready') }),
-        delete: () => ({ error: new Error('Not ready') }),
-      };
-    }
-    return _supabaseInstance.from(table);
-  },
-  get storage() {
-    return {
-      from: (bucket) => {
-        if (!_supabaseInstance) {
-          return {
-            upload: async () => ({ error: new Error('Not ready') }),
-            getPublicUrl: () => ({ data: { publicUrl: '' } }),
-          };
-        }
-        return _supabaseInstance.storage.from(bucket);
+      // Return chainable dummy that resolves to empty data
+      if (prop === 'from') {
+        return () => createChainableDummy();
       }
-    };
-  },
-} : null;
+      if (prop === 'auth') {
+        return {
+          getSession: async () => ({ data: { session: null } }),
+          getUser: async () => ({ data: { user: null } }),
+          onAuthStateChange: (cb) => {
+            // When ready, set up real listener
+            _initPromise?.then(() => {
+              _supabaseInstance?.auth.onAuthStateChange(cb);
+            });
+            return { data: { subscription: { unsubscribe: () => {} } } };
+          },
+          signOut: async () => ({ error: null }),
+          signInWithOtp: async () => ({ error: new Error('Loading...') }),
+          verifyOtp: async () => ({ error: new Error('Loading...') }),
+          signInWithPassword: async () => ({ error: new Error('Loading...') }),
+        };
+      }
+      if (prop === 'storage') {
+        return {
+          from: () => ({
+            upload: async () => ({ error: new Error('Loading...') }),
+            getPublicUrl: () => ({ data: { publicUrl: '' } }),
+          })
+        };
+      }
+      return undefined;
+    }
+    return _supabaseInstance[prop];
+  }
+}) : null;
+
+// Create a chainable dummy that returns empty data when awaited
+function createChainableDummy() {
+  const dummy = {
+    select: () => dummy,
+    insert: () => dummy,
+    update: () => dummy,
+    delete: () => dummy,
+    eq: () => dummy,
+    neq: () => dummy,
+    gt: () => dummy,
+    lt: () => dummy,
+    gte: () => dummy,
+    lte: () => dummy,
+    like: () => dummy,
+    ilike: () => dummy,
+    is: () => dummy,
+    in: () => dummy,
+    order: () => dummy,
+    limit: () => dummy,
+    range: () => dummy,
+    single: () => dummy,
+    maybeSingle: () => dummy,
+    // When awaited, return empty result
+    then: (resolve) => resolve({ data: [], error: null, count: 0 }),
+  };
+  return dummy;
+}
 
 // Auth helpers
 export const getCurrentUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
+  await waitForSupabase();
+  if (!_supabaseInstance) return null;
+  const { data: { user } } = await _supabaseInstance.auth.getUser();
   return user;
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
+  await waitForSupabase();
+  if (!_supabaseInstance) return { error: null };
+  const { error } = await _supabaseInstance.auth.signOut();
   return { error };
 };
 
-// Database helpers for listings
+// Database helpers - WAIT for Supabase to be ready
 export const getListings = async (table, filters = {}) => {
-  if (!supabase) {
-    return { data: [], error: new Error('Supabase not configured') };
+  if (!isBackendReady) {
+    return { data: [], error: null };
+  }
+
+  // Wait for SDK to initialize
+  await waitForSupabase();
+  if (!_supabaseInstance) {
+    return { data: [], error: null };
   }
 
   try {
-    let query = supabase
+    let query = _supabaseInstance
       .from(table)
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Apply status filter (default: active)
     if (filters.status !== undefined) {
       query = query.eq('status', filters.status);
     } else if (filters.includeAll !== true) {
@@ -130,35 +162,35 @@ export const getListings = async (table, filters = {}) => {
     }
 
     const { data, error } = await query;
-
-    if (error) {
-      console.error(`getListings(${table}) error:`, error.message);
-    }
-
     return { data: data || [], error };
   } catch (err) {
-    console.error(`getListings(${table}) exception:`, err);
+    console.error(`getListings(${table}) error:`, err);
     return { data: [], error: err };
   }
 };
 
-// Paginated listings fetch with .range()
+// Paginated fetch - WAIT for Supabase
 export const getListingsPaginated = async (table, { page = 0, pageSize = 20, filters = {} } = {}) => {
-  if (!supabase) {
-    return { data: [], error: new Error('Supabase not configured'), hasMore: false, total: 0 };
+  if (!isBackendReady) {
+    return { data: [], error: null, hasMore: false, total: 0 };
+  }
+
+  // Wait for SDK
+  await waitForSupabase();
+  if (!_supabaseInstance) {
+    return { data: [], error: null, hasMore: false, total: 0 };
   }
 
   try {
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
-    let query = supabase
+    let query = _supabaseInstance
       .from(table)
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    // Apply status filter (default: active)
     if (filters.status !== undefined) {
       query = query.eq('status', filters.status);
     } else if (filters.includeAll !== true) {
@@ -178,7 +210,6 @@ export const getListingsPaginated = async (table, { page = 0, pageSize = 20, fil
     const { data, error, count } = await query;
 
     if (error) {
-      console.error(`getListingsPaginated(${table}) error:`, error.message);
       return { data: [], error, hasMore: false, total: 0 };
     }
 
@@ -187,38 +218,49 @@ export const getListingsPaginated = async (table, { page = 0, pageSize = 20, fil
 
     return { data: data || [], error: null, hasMore, total };
   } catch (err) {
-    console.error(`getListingsPaginated(${table}) exception:`, err);
+    console.error(`getListingsPaginated error:`, err);
     return { data: [], error: err, hasMore: false, total: 0 };
   }
 };
 
-// Subscribe to realtime changes on a table
+// Realtime subscription
 export const subscribeToListings = (table, callback) => {
   if (!_supabaseInstance) {
-    console.warn('Supabase not initialized for realtime');
-    return { unsubscribe: () => {} };
+    // Wait and subscribe when ready
+    _initPromise?.then(() => {
+      if (_supabaseInstance) {
+        const channel = _supabaseInstance
+          .channel(`${table}-changes`)
+          .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
+          .subscribe();
+        // Store for cleanup
+        callback._channel = channel;
+      }
+    });
+    return {
+      unsubscribe: () => {
+        if (callback._channel && _supabaseInstance) {
+          _supabaseInstance.removeChannel(callback._channel);
+        }
+      }
+    };
   }
 
   const channel = _supabaseInstance
     .channel(`${table}-changes`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table },
-      (payload) => {
-        callback(payload);
-      }
-    )
+    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
     .subscribe();
 
   return {
-    unsubscribe: () => {
-      _supabaseInstance.removeChannel(channel);
-    }
+    unsubscribe: () => _supabaseInstance.removeChannel(channel)
   };
 };
 
 export const createListing = async (table, listing) => {
-  const { data, error } = await supabase
+  await waitForSupabase();
+  if (!_supabaseInstance) return { data: null, error: new Error('Not ready') };
+
+  const { data, error } = await _supabaseInstance
     .from(table)
     .insert([listing])
     .select()
@@ -227,7 +269,10 @@ export const createListing = async (table, listing) => {
 };
 
 export const updateListing = async (table, id, updates) => {
-  const { data, error } = await supabase
+  await waitForSupabase();
+  if (!_supabaseInstance) return { data: null, error: new Error('Not ready') };
+
+  const { data, error } = await _supabaseInstance
     .from(table)
     .update(updates)
     .eq('id', id)
@@ -237,16 +282,21 @@ export const updateListing = async (table, id, updates) => {
 };
 
 export const deleteListing = async (table, id) => {
-  const { error } = await supabase
+  await waitForSupabase();
+  if (!_supabaseInstance) return { error: new Error('Not ready') };
+
+  const { error } = await _supabaseInstance
     .from(table)
     .delete()
     .eq('id', id);
   return { error };
 };
 
-// Profile helpers
 export const getProfile = async (userId) => {
-  const { data, error } = await supabase
+  await waitForSupabase();
+  if (!_supabaseInstance) return { data: null, error: null };
+
+  const { data, error } = await _supabaseInstance
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -255,7 +305,10 @@ export const getProfile = async (userId) => {
 };
 
 export const updateProfile = async (userId, updates) => {
-  const { data, error } = await supabase
+  await waitForSupabase();
+  if (!_supabaseInstance) return { data: null, error: new Error('Not ready') };
+
+  const { data, error } = await _supabaseInstance
     .from('profiles')
     .update(updates)
     .eq('id', userId)
@@ -264,15 +317,17 @@ export const updateProfile = async (userId, updates) => {
   return { data, error };
 };
 
-// File upload helper
 export const uploadImage = async (bucket, path, file) => {
-  const { data, error } = await supabase.storage
+  await waitForSupabase();
+  if (!_supabaseInstance) return { error: new Error('Not ready') };
+
+  const { data, error } = await _supabaseInstance.storage
     .from(bucket)
     .upload(path, file);
 
   if (error) return { error };
 
-  const { data: { publicUrl } } = supabase.storage
+  const { data: { publicUrl } } = _supabaseInstance.storage
     .from(bucket)
     .getPublicUrl(path);
 
