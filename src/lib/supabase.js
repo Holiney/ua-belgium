@@ -142,6 +142,81 @@ export const getListings = async (table, filters = {}) => {
   }
 };
 
+// Paginated listings fetch with .range()
+export const getListingsPaginated = async (table, { page = 0, pageSize = 20, filters = {} } = {}) => {
+  if (!supabase) {
+    return { data: [], error: new Error('Supabase not configured'), hasMore: false, total: 0 };
+  }
+
+  try {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from(table)
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    // Apply status filter (default: active)
+    if (filters.status !== undefined) {
+      query = query.eq('status', filters.status);
+    } else if (filters.includeAll !== true) {
+      query = query.eq('status', 'active');
+    }
+
+    if (filters.category && filters.category !== 'all') {
+      query = query.eq('category', filters.category);
+    }
+    if (filters.city && filters.city !== 'all') {
+      query = query.eq('city', filters.city);
+    }
+    if (filters.search) {
+      query = query.ilike('title', `%${filters.search}%`);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error(`getListingsPaginated(${table}) error:`, error.message);
+      return { data: [], error, hasMore: false, total: 0 };
+    }
+
+    const total = count || 0;
+    const hasMore = (page + 1) * pageSize < total;
+
+    return { data: data || [], error: null, hasMore, total };
+  } catch (err) {
+    console.error(`getListingsPaginated(${table}) exception:`, err);
+    return { data: [], error: err, hasMore: false, total: 0 };
+  }
+};
+
+// Subscribe to realtime changes on a table
+export const subscribeToListings = (table, callback) => {
+  if (!_supabaseInstance) {
+    console.warn('Supabase not initialized for realtime');
+    return { unsubscribe: () => {} };
+  }
+
+  const channel = _supabaseInstance
+    .channel(`${table}-changes`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table },
+      (payload) => {
+        callback(payload);
+      }
+    )
+    .subscribe();
+
+  return {
+    unsubscribe: () => {
+      _supabaseInstance.removeChannel(channel);
+    }
+  };
+};
+
 export const createListing = async (table, listing) => {
   const { data, error } = await supabase
     .from(table)
