@@ -5,53 +5,73 @@ import { loadFromStorage, saveToStorage } from '../utils/storage';
 const PAGE_SIZE = 20;
 
 /**
- * Hook for infinite scroll listings with:
- * - Pagination using Supabase .range()
- * - Realtime subscriptions for live updates
- * - Local caching for instant display
- * - Optimistic updates
+ * Hook for infinite scroll listings with TRUE instant display:
+ * - Shows cached data IMMEDIATELY (no loading state if cache exists)
+ * - Fetches fresh data silently in background
+ * - Updates UI only when new data differs from cache
  */
 export function useInfiniteListings(table, filters = {}) {
-  const cacheKey = useMemo(() => {
-    const filterStr = JSON.stringify(filters);
-    return `${table}-infinite-${filterStr}`;
+  // Get cached data SYNCHRONOUSLY for instant display
+  const getCachedData = useCallback(() => {
+    const cached = loadFromStorage(`${table}-items`, []);
+    // Apply client-side filters to cached data for instant response
+    if (cached.length === 0) return [];
+
+    return cached.filter(item => {
+      if (filters.category && filters.category !== 'all' && item.category !== filters.category) return false;
+      if (filters.city && filters.city !== 'all' && item.city !== filters.city) return false;
+      if (filters.search && !item.title?.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      return true;
+    });
   }, [table, filters]);
 
-  // Get cached data for instant display
-  const cachedData = useMemo(() => loadFromStorage(`${table}-items`, []), [table]);
+  const initialCache = useMemo(getCachedData, [getCachedData]);
 
-  const [listings, setListings] = useState(cachedData);
-  const [isLoading, setIsLoading] = useState(cachedData.length === 0);
+  // State - show cached data IMMEDIATELY, no loading if cache exists
+  const [listings, setListings] = useState(initialCache);
+  const [isLoading, setIsLoading] = useState(initialCache.length === 0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(initialCache.length);
   const [error, setError] = useState(null);
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
 
   const pageRef = useRef(0);
   const isFetchingRef = useRef(false);
-  const filtersRef = useRef(filters);
+  const mountedRef = useRef(true);
 
-  // Track if filters changed
+  // Cleanup on unmount
   useEffect(() => {
-    const filtersChanged = JSON.stringify(filters) !== JSON.stringify(filtersRef.current);
-    if (filtersChanged) {
-      filtersRef.current = filters;
-      pageRef.current = 0;
-      setListings([]);
-      setHasMore(true);
-      setIsLoading(true);
-    }
-  }, [filters]);
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
-  // Fetch a page of listings
-  const fetchPage = useCallback(async (page, append = false) => {
+  // When filters change, immediately show filtered cache, then fetch
+  useEffect(() => {
+    const filteredCache = getCachedData();
+    setListings(filteredCache);
+    setTotal(filteredCache.length);
+    // Only show loading if no cached data at all
+    setIsLoading(filteredCache.length === 0);
+    pageRef.current = 0;
+    setHasMore(true);
+  }, [getCachedData]);
+
+  // Fetch a page of listings (silent background fetch)
+  const fetchPage = useCallback(async (page, append = false, silent = false) => {
     if (!isBackendReady || isFetchingRef.current) return;
 
     isFetchingRef.current = true;
-    if (page === 0) {
-      setIsLoading(true);
+
+    // Only show loading states if NOT silent and no data
+    if (!silent) {
+      if (page === 0 && listings.length === 0) {
+        setIsLoading(true);
+      } else if (page > 0) {
+        setIsLoadingMore(true);
+      }
     } else {
-      setIsLoadingMore(true);
+      setIsBackgroundRefreshing(true);
     }
 
     try {
@@ -60,6 +80,8 @@ export function useInfiniteListings(table, filters = {}) {
         { page, pageSize: PAGE_SIZE, filters }
       );
 
+      if (!mountedRef.current) return;
+
       if (fetchError) {
         setError(fetchError);
         return;
@@ -67,8 +89,9 @@ export function useInfiniteListings(table, filters = {}) {
 
       setListings(prev => {
         const newData = append ? [...prev, ...data] : data;
-        // Save first page to localStorage for instant display next time
-        if (page === 0) {
+        // Save to localStorage for next instant display
+        if (page === 0 && data.length > 0) {
+          // Save unfiltered data for better cache
           saveToStorage(`${table}-items`, newData);
         }
         return newData;
@@ -79,59 +102,70 @@ export function useInfiniteListings(table, filters = {}) {
       pageRef.current = page;
     } catch (err) {
       console.error('Error fetching listings:', err);
-      setError(err);
+      if (mountedRef.current) {
+        setError(err);
+      }
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-      isFetchingRef.current = false;
+      if (mountedRef.current) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+        setIsBackgroundRefreshing(false);
+        isFetchingRef.current = false;
+      }
     }
-  }, [table, filters]);
+  }, [table, filters, listings.length]);
 
-  // Initial fetch
+  // Initial fetch - SILENT if we have cache
   useEffect(() => {
-    fetchPage(0, false);
-  }, [fetchPage]);
+    const hasCache = listings.length > 0;
+    // Fetch silently in background if we have cache
+    fetchPage(0, false, hasCache);
+  }, [table, JSON.stringify(filters)]); // Re-fetch when filters change
 
   // Load more (for infinite scroll)
   const loadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || isFetchingRef.current) return;
-    fetchPage(pageRef.current + 1, true);
+    fetchPage(pageRef.current + 1, true, false);
   }, [hasMore, isLoadingMore, fetchPage]);
 
-  // Refresh (reload from start)
+  // Manual refresh
   const refresh = useCallback(() => {
     pageRef.current = 0;
     setHasMore(true);
-    fetchPage(0, false);
+    fetchPage(0, false, false);
   }, [fetchPage]);
 
-  // Realtime subscription
+  // Realtime subscription for live updates
   useEffect(() => {
     if (!isBackendReady) return;
 
     const subscription = subscribeToListings(table, (payload) => {
+      if (!mountedRef.current) return;
+
       const { eventType, new: newRecord, old: oldRecord } = payload;
 
       setListings(prev => {
+        let updated;
         switch (eventType) {
           case 'INSERT':
-            // Add new item at the beginning
             if (newRecord.status === 'active') {
-              const updated = [newRecord, ...prev];
-              saveToStorage(`${table}-items`, updated.slice(0, PAGE_SIZE));
+              updated = [newRecord, ...prev];
+              saveToStorage(`${table}-items`, updated.slice(0, PAGE_SIZE * 2));
               return updated;
             }
             return prev;
 
           case 'UPDATE':
-            // Update existing item
-            return prev.map(item =>
+            updated = prev.map(item =>
               item.id === newRecord.id ? newRecord : item
             );
+            saveToStorage(`${table}-items`, updated.slice(0, PAGE_SIZE * 2));
+            return updated;
 
           case 'DELETE':
-            // Remove deleted item
-            return prev.filter(item => item.id !== oldRecord.id);
+            updated = prev.filter(item => item.id !== oldRecord.id);
+            saveToStorage(`${table}-items`, updated.slice(0, PAGE_SIZE * 2));
+            return updated;
 
           default:
             return prev;
@@ -146,23 +180,34 @@ export function useInfiniteListings(table, filters = {}) {
 
   // Optimistic update helpers
   const addOptimistic = useCallback((item) => {
-    setListings(prev => [item, ...prev]);
-  }, []);
+    setListings(prev => {
+      const updated = [item, ...prev];
+      saveToStorage(`${table}-items`, updated.slice(0, PAGE_SIZE * 2));
+      return updated;
+    });
+  }, [table]);
 
   const updateOptimistic = useCallback((id, updates) => {
-    setListings(prev =>
-      prev.map(item => item.id === id ? { ...item, ...updates } : item)
-    );
-  }, []);
+    setListings(prev => {
+      const updated = prev.map(item => item.id === id ? { ...item, ...updates } : item);
+      saveToStorage(`${table}-items`, updated.slice(0, PAGE_SIZE * 2));
+      return updated;
+    });
+  }, [table]);
 
   const removeOptimistic = useCallback((id) => {
-    setListings(prev => prev.filter(item => item.id !== id));
-  }, []);
+    setListings(prev => {
+      const updated = prev.filter(item => item.id !== id);
+      saveToStorage(`${table}-items`, updated.slice(0, PAGE_SIZE * 2));
+      return updated;
+    });
+  }, [table]);
 
   return {
     listings,
     isLoading,
     isLoadingMore,
+    isBackgroundRefreshing, // New: indicates silent refresh in progress
     hasMore,
     total,
     error,
