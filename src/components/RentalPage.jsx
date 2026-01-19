@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
-import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar, Image, Trash2, Edit2, LogIn } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar, Trash2, Edit2, LogIn } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,7 @@ import { supabase, isBackendReady, createListing, updateListing, deleteListing }
 import { useInfiniteListings } from '../hooks/useInfiniteListings';
 import { OptimizedList } from './ui/VirtualizedList';
 import { LazyImageGallery } from './ui/LazyImage';
-import { ListingSkeletonGrid } from './ui/Skeleton';
+import { ImageUpload } from './ui/ImageUpload';
 
 // Get or create local user ID for anonymous users
 function getLocalUserId() {
@@ -46,79 +46,6 @@ const priceLabel = {
   week: '/тиждень',
 };
 
-// Image Upload Component
-function ImageUpload({ images, onChange, maxImages = 5 }) {
-  const inputRef = useRef(null);
-
-  const handleFileSelect = async (e) => {
-    const files = Array.from(e.target.files);
-    const remainingSlots = maxImages - images.length;
-    const filesToProcess = files.slice(0, remainingSlots);
-
-    const readFile = (file) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      });
-    };
-
-    const newImages = await Promise.all(filesToProcess.map(readFile));
-    onChange([...images, ...newImages]);
-    e.target.value = '';
-  };
-
-  const removeImage = (index) => {
-    onChange(images.filter((_, i) => i !== index));
-  };
-
-  return (
-    <div className="space-y-3">
-      <label className="block text-sm font-medium dark:text-gray-200">
-        Фото (до {maxImages} шт.)
-      </label>
-
-      {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          {images.map((img, idx) => (
-            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-              <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
-              <button
-                type="button"
-                onClick={() => removeImage(idx)}
-                className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {images.length < maxImages && (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center gap-2 hover:border-blue-500 transition-colors"
-        >
-          <Image className="w-8 h-8 text-gray-400" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Додати фото ({images.length}/{maxImages})
-          </span>
-        </button>
-      )}
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-    </div>
-  );
-}
 
 // Add Rental Form Component
 function AddRentalForm({ onClose, onAdd, editItem = null }) {
