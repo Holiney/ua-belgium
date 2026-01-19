@@ -1,10 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar, Image, ChevronLeft, ChevronRight, Trash2, Edit2, LogIn } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
+import { Plus, X, Heart, MapPin, Phone, MessageCircle, Search, Home, Calendar, Image, Trash2, Edit2, LogIn } from 'lucide-react';
 import { Card } from './Layout';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, isBackendReady, createListing, updateListing, deleteListing } from '../lib/supabase';
-import { useListings } from '../hooks/useListings';
+import { useInfiniteListings } from '../hooks/useInfiniteListings';
+import { OptimizedList } from './ui/VirtualizedList';
+import { LazyImageGallery } from './ui/LazyImage';
+import { ListingSkeletonGrid } from './ui/Skeleton';
 
 // Get or create local user ID for anonymous users
 function getLocalUserId() {
@@ -36,6 +39,12 @@ export const cities = [
   { id: 'other', name: 'Інше місто' },
 ];
 
+// Price type labels
+const priceLabel = {
+  month: '/міс',
+  day: '/добу',
+  week: '/тиждень',
+};
 
 // Image Upload Component
 function ImageUpload({ images, onChange, maxImages = 5 }) {
@@ -46,7 +55,6 @@ function ImageUpload({ images, onChange, maxImages = 5 }) {
     const remainingSlots = maxImages - images.length;
     const filesToProcess = files.slice(0, remainingSlots);
 
-    // Read all files first, then update state once
     const readFile = (file) => {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -57,7 +65,6 @@ function ImageUpload({ images, onChange, maxImages = 5 }) {
 
     const newImages = await Promise.all(filesToProcess.map(readFile));
     onChange([...images, ...newImages]);
-
     e.target.value = '';
   };
 
@@ -75,7 +82,7 @@ function ImageUpload({ images, onChange, maxImages = 5 }) {
         <div className="grid grid-cols-3 gap-2">
           {images.map((img, idx) => (
             <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-              <img src={img} alt="" className="w-full h-full object-cover" />
+              <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
               <button
                 type="button"
                 onClick={() => removeImage(idx)}
@@ -349,52 +356,47 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
   );
 }
 
-// Rental Card Component
-function RentalCard({ rental, isFavorite, onToggleFavorite, isOwner, onEdit, onDelete }) {
+// Memoized Rental Card Component - prevents re-renders when other items change
+const RentalCard = memo(function RentalCard({ rental, isFavorite, onToggleFavorite, isOwner, onEdit, onDelete }) {
   const [showContacts, setShowContacts] = useState(false);
-  const [imageIndex, setImageIndex] = useState(0);
-  const category = categories.find(c => c.id === rental.category || c.id === rental.rental_type);
-  const city = cities.find(c => c.id === rental.city);
+
+  const category = useMemo(
+    () => categories.find(c => c.id === rental.category || c.id === rental.rental_type),
+    [rental.category, rental.rental_type]
+  );
+  const city = useMemo(
+    () => cities.find(c => c.id === rental.city),
+    [rental.city]
+  );
 
   // Handle both local and Supabase data formats
   const contactPhone = rental.contact?.phone || rental.contact_phone;
   const contactTelegram = rental.contact?.telegram || rental.contact_telegram;
 
-  const priceLabel = {
-    month: '/міс',
-    day: '/добу',
-    week: '/тиждень',
-  };
+  const handleEdit = useCallback((e) => {
+    e.stopPropagation();
+    onEdit(rental);
+  }, [onEdit, rental]);
+
+  const handleDelete = useCallback((e) => {
+    e.stopPropagation();
+    onDelete(rental.id);
+  }, [onDelete, rental.id]);
+
+  const handleToggleFavorite = useCallback((e) => {
+    e.stopPropagation();
+    onToggleFavorite(rental.id);
+  }, [onToggleFavorite, rental.id]);
 
   return (
     <Card className="overflow-hidden">
+      {/* Lazy-loaded image gallery */}
       {rental.images && rental.images.length > 0 && (
-        <div className="relative aspect-video bg-gray-100 dark:bg-gray-700">
-          <img
-            src={rental.images[imageIndex]}
-            alt={rental.title}
-            className="w-full h-full object-cover"
-          />
-          {rental.images.length > 1 && (
-            <>
-              <button
-                onClick={() => setImageIndex(i => (i > 0 ? i - 1 : rental.images.length - 1))}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 rounded-full text-white"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setImageIndex(i => (i < rental.images.length - 1 ? i + 1 : 0))}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 rounded-full text-white"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/50 rounded-full text-white text-xs">
-                {imageIndex + 1}/{rental.images.length}
-              </div>
-            </>
-          )}
-        </div>
+        <LazyImageGallery
+          images={rental.images}
+          alt={rental.title}
+          className="aspect-video bg-gray-100 dark:bg-gray-700"
+        />
       )}
 
       <div className="p-4">
@@ -410,26 +412,20 @@ function RentalCard({ rental, isFavorite, onToggleFavorite, isOwner, onEdit, onD
             {isOwner && (
               <>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onEdit(rental); }}
+                  onClick={handleEdit}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
                 >
                   <Edit2 className="w-4 h-4 text-gray-400" />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onDelete(rental.id); }}
+                  onClick={handleDelete}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
                 >
                   <Trash2 className="w-4 h-4 text-red-400" />
                 </button>
               </>
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite(rental.id);
-              }}
-              className="p-2 -m-2"
-            >
+            <button onClick={handleToggleFavorite} className="p-2 -m-2">
               <Heart
                 className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
               />
@@ -516,7 +512,7 @@ function RentalCard({ rental, isFavorite, onToggleFavorite, isOwner, onEdit, onD
       </div>
     </Card>
   );
-}
+});
 
 // Auth Required Modal
 function AuthRequiredModal({ onClose, onLogin }) {
@@ -559,6 +555,18 @@ const isValidUUID = (str) => {
   return uuidRegex.test(str);
 };
 
+// Debounce hook for search
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 // Main Rental Page
 export function RentalPage({ onNavigate }) {
   const { user, isAuthenticated } = useAuth();
@@ -570,10 +578,28 @@ export function RentalPage({ onNavigate }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState(() => loadFromStorage('rental-favorites', []));
 
-  // SWR for instant cache + background refresh
-  const { listings: userRentals, isLoading, refresh } = useListings('rentals');
+  // Debounce search for better performance
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const loadListings = refresh;
+  // Build filters for the hook
+  const filters = useMemo(() => ({
+    category: selectedCategory,
+    city: selectedCity,
+    search: debouncedSearch,
+  }), [selectedCategory, selectedCity, debouncedSearch]);
+
+  // Use infinite listings hook with pagination and realtime
+  const {
+    listings: userRentals,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    total,
+    loadMore,
+    refresh,
+    addOptimistic,
+    removeOptimistic,
+  } = useInfiniteListings('rentals', filters);
 
   // Check for item to edit from profile page
   useEffect(() => {
@@ -585,26 +611,22 @@ export function RentalPage({ onNavigate }) {
     }
   }, []);
 
-  const allRentals = [...userRentals].sort(
-    (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
-  );
+  // Filter locally for instant UI response (server filters already applied)
+  const filteredRentals = useMemo(() => {
+    return userRentals.sort(
+      (a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
+    );
+  }, [userRentals]);
 
-  const filteredRentals = allRentals.filter(rental => {
-    if (selectedCategory !== 'all' && rental.category !== selectedCategory) return false;
-    if (selectedCity !== 'all' && rental.city !== selectedCity) return false;
-    if (searchQuery && !rental.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
-
-  const handleAddClick = () => {
+  const handleAddClick = useCallback(() => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
     } else {
       setShowAddForm(true);
     }
-  };
+  }, [isAuthenticated]);
 
-  const handleAddRental = async (rental) => {
+  const handleAddRental = useCallback(async (rental) => {
     if (isBackendReady && supabase && user) {
       try {
         const supabaseData = {
@@ -626,18 +648,20 @@ export function RentalPage({ onNavigate }) {
             throw new Error('Помилка оновлення: ' + error.message);
           }
         } else {
+          // Optimistic add
+          addOptimistic({ ...rental, ...supabaseData, id: 'temp-' + Date.now() });
           const { error } = await createListing('rentals', supabaseData);
           if (error) {
             throw new Error('Помилка створення: ' + error.message);
           }
         }
-        await loadListings();
+        await refresh();
       } catch (err) {
         console.error('Supabase error:', err);
         throw err;
       }
     } else {
-      // Offline mode - update localStorage and refresh cache
+      // Offline mode
       const existingIndex = userRentals.findIndex(r => r.id === rental.id);
       let updated;
       if (existingIndex >= 0) {
@@ -647,50 +671,68 @@ export function RentalPage({ onNavigate }) {
         updated = [rental, ...userRentals];
       }
       saveToStorage('rentals-items', updated);
-      refresh(updated, false); // Update SWR cache without revalidation
+      refresh();
     }
     setEditingRental(null);
-  };
+  }, [user, userRentals, addOptimistic, refresh]);
 
-  const handleDeleteRental = async (rentalId) => {
+  const handleDeleteRental = useCallback(async (rentalId) => {
     if (!confirm('Видалити це оголошення?')) return;
 
     if (isBackendReady && supabase && user) {
       try {
+        // Optimistic delete
+        removeOptimistic(rentalId);
         const { error } = await deleteListing('rentals', rentalId);
         if (error) {
           alert('Помилка видалення: ' + error.message);
+          refresh(); // Revert on error
           return;
         }
-        await loadListings();
       } catch (err) {
         console.error('Error deleting rental:', err);
+        refresh();
       }
     } else {
-      // Offline mode - update localStorage and refresh cache
       const updated = userRentals.filter(r => r.id !== rentalId);
       saveToStorage('rentals-items', updated);
-      refresh(updated, false); // Update SWR cache without revalidation
+      refresh();
     }
-  };
+  }, [user, userRentals, removeOptimistic, refresh]);
 
-  const handleEditRental = (rental) => {
+  const handleEditRental = useCallback((rental) => {
     setEditingRental(rental);
     setShowAddForm(true);
-  };
+  }, []);
 
-  const toggleFavorite = (rentalId) => {
-    const updated = favorites.includes(rentalId)
-      ? favorites.filter(id => id !== rentalId)
-      : [...favorites, rentalId];
-    setFavorites(updated);
-    saveToStorage('rental-favorites', updated);
-  };
+  const toggleFavorite = useCallback((rentalId) => {
+    setFavorites(prev => {
+      const updated = prev.includes(rentalId)
+        ? prev.filter(id => id !== rentalId)
+        : [...prev, rentalId];
+      saveToStorage('rental-favorites', updated);
+      return updated;
+    });
+  }, []);
 
-  const isOwner = (rental) => {
+  const isOwner = useCallback((rental) => {
     if (!user) return false;
     return rental.user_id === user.id || rental.userId === user.id;
-  };
+  }, [user]);
+
+  // Render item function for virtualized list
+  const renderItem = useCallback((rental) => (
+    <RentalCard
+      rental={rental}
+      isFavorite={favorites.includes(rental.id)}
+      onToggleFavorite={toggleFavorite}
+      isOwner={isOwner(rental)}
+      onEdit={handleEditRental}
+      onDelete={handleDeleteRental}
+    />
+  ), [favorites, toggleFavorite, isOwner, handleEditRental, handleDeleteRental]);
+
+  const keyExtractor = useCallback((rental) => rental.id, []);
 
   return (
     <div className="space-y-4">
@@ -741,29 +783,21 @@ export function RentalPage({ onNavigate }) {
 
       {/* Results count */}
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Знайдено: {filteredRentals.length} оголошень
+        {isLoading ? 'Завантаження...' : `Знайдено: ${total || filteredRentals.length} оголошень`}
       </p>
 
-      {/* Rentals Grid */}
-      <div className="grid gap-4">
-        {filteredRentals.map(rental => (
-          <RentalCard
-            key={rental.id}
-            rental={rental}
-            isFavorite={favorites.includes(rental.id)}
-            onToggleFavorite={toggleFavorite}
-            isOwner={isOwner(rental)}
-            onEdit={handleEditRental}
-            onDelete={handleDeleteRental}
-          />
-        ))}
-      </div>
-
-      {filteredRentals.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">Оголошень не знайдено</p>
-        </div>
-      )}
+      {/* Optimized Rentals List with virtualization and infinite scroll */}
+      <OptimizedList
+        items={filteredRentals}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        total={total}
+        onLoadMore={loadMore}
+        emptyMessage="Оголошень не знайдено"
+      />
 
       {/* Add Button */}
       <button
