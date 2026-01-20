@@ -4,7 +4,7 @@ import { Card, SectionTitle } from './Layout';
 import { LoginPage } from './PhoneLogin';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { supabase, isBackendReady, getListings, deleteListing } from '../lib/supabase';
-import { compressImage } from './ui/ImageUpload';
+import { compressImage } from '../utils/imageCompression';
 import {
   User,
   LogOut,
