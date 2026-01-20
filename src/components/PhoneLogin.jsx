@@ -1,7 +1,96 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
-import { Phone, ArrowRight, RefreshCw, User } from 'lucide-react';
+import { Phone, ArrowRight, RefreshCw, User, AlertTriangle } from 'lucide-react';
+
+// Rate limiting constants
+const OTP_RATE_LIMIT_KEY = 'otp-rate-limit';
+const MAX_OTP_PER_PHONE_PER_HOUR = 3;
+const MAX_OTP_PER_DAY = 10;
+const BASE_COOLDOWN = 60; // seconds
+
+// Get rate limit data
+function getRateLimitData() {
+  const data = loadFromStorage(OTP_RATE_LIMIT_KEY, {
+    requests: [],
+    phoneRequests: {},
+  });
+
+  // Clean up old requests (older than 24 hours)
+  const now = Date.now();
+  const dayAgo = now - 24 * 60 * 60 * 1000;
+  const hourAgo = now - 60 * 60 * 1000;
+
+  data.requests = data.requests.filter(t => t > dayAgo);
+
+  // Clean phone requests older than 1 hour
+  Object.keys(data.phoneRequests).forEach(phone => {
+    data.phoneRequests[phone] = data.phoneRequests[phone].filter(t => t > hourAgo);
+    if (data.phoneRequests[phone].length === 0) {
+      delete data.phoneRequests[phone];
+    }
+  });
+
+  return data;
+}
+
+// Check if rate limited
+function checkRateLimit(phone) {
+  const data = getRateLimitData();
+  const now = Date.now();
+  const hourAgo = now - 60 * 60 * 1000;
+
+  // Check daily limit
+  if (data.requests.length >= MAX_OTP_PER_DAY) {
+    const oldestRequest = Math.min(...data.requests);
+    const resetTime = new Date(oldestRequest + 24 * 60 * 60 * 1000);
+    return {
+      limited: true,
+      reason: 'daily',
+      message: `Досягнуто денний ліміт SMS. Спробуйте після ${resetTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}`,
+    };
+  }
+
+  // Check per-phone hourly limit
+  const phoneRequests = data.phoneRequests[phone] || [];
+  if (phoneRequests.length >= MAX_OTP_PER_PHONE_PER_HOUR) {
+    const oldestRequest = Math.min(...phoneRequests);
+    const resetTime = new Date(oldestRequest + 60 * 60 * 1000);
+    return {
+      limited: true,
+      reason: 'phone',
+      message: `Забагато спроб для цього номера. Спробуйте після ${resetTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}`,
+    };
+  }
+
+  // Calculate cooldown based on attempts (exponential backoff)
+  const recentRequests = data.requests.filter(t => t > hourAgo);
+  const cooldownMultiplier = Math.min(Math.pow(2, recentRequests.length), 8); // Max 8x
+
+  return {
+    limited: false,
+    cooldown: BASE_COOLDOWN * cooldownMultiplier,
+    attemptsLeft: {
+      phone: MAX_OTP_PER_PHONE_PER_HOUR - phoneRequests.length,
+      daily: MAX_OTP_PER_DAY - data.requests.length,
+    },
+  };
+}
+
+// Record OTP request
+function recordOtpRequest(phone) {
+  const data = getRateLimitData();
+  const now = Date.now();
+
+  data.requests.push(now);
+
+  if (!data.phoneRequests[phone]) {
+    data.phoneRequests[phone] = [];
+  }
+  data.phoneRequests[phone].push(now);
+
+  saveToStorage(OTP_RATE_LIMIT_KEY, data);
+}
 
 // Phone Login with OTP - Belgian format
 export function PhoneLoginButton({ onSuccess, onError }) {
@@ -14,6 +103,7 @@ export function PhoneLoginButton({ onSuccess, onError }) {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [userData, setUserData] = useState(null);
+  const [rateLimitInfo, setRateLimitInfo] = useState(null);
 
   // Format Belgian phone number: +32 4XX XX XX XX
   const formatBelgianPhone = (value) => {
@@ -83,19 +173,33 @@ export function PhoneLoginButton({ onSuccess, onError }) {
       return;
     }
 
+    const rawPhone = getRawPhone(phone);
+
+    // Check rate limit
+    const rateCheck = checkRateLimit(rawPhone);
+    if (rateCheck.limited) {
+      setError(rateCheck.message);
+      setRateLimitInfo(rateCheck);
+      return;
+    }
+
     setIsLoading(true);
     setError('');
+    setRateLimitInfo(null);
 
     try {
-      const rawPhone = getRawPhone(phone);
       const { error } = await sendOtp(rawPhone);
 
       if (error) {
         setError(error.message || 'Помилка відправки коду');
       } else {
+        // Record successful OTP request
+        recordOtpRequest(rawPhone);
+
         setStep('otp');
-        // Start countdown for resend
-        setCountdown(60);
+        // Start countdown with exponential backoff
+        const cooldownTime = rateCheck.cooldown || BASE_COOLDOWN;
+        setCountdown(cooldownTime);
         const timer = setInterval(() => {
           setCountdown((prev) => {
             if (prev <= 1) {
@@ -105,6 +209,14 @@ export function PhoneLoginButton({ onSuccess, onError }) {
             return prev - 1;
           });
         }, 1000);
+
+        // Update rate limit info
+        setRateLimitInfo({
+          attemptsLeft: {
+            phone: rateCheck.attemptsLeft.phone - 1,
+            daily: rateCheck.attemptsLeft.daily - 1,
+          }
+        });
       }
     } catch (err) {
       setError(err.message || 'Помилка відправки коду');
@@ -193,9 +305,32 @@ export function PhoneLoginButton({ onSuccess, onError }) {
     }
   };
 
+  // Check rate limit on phone change
+  useEffect(() => {
+    if (isValidBelgianPhone(phone)) {
+      const rawPhone = getRawPhone(phone);
+      const rateCheck = checkRateLimit(rawPhone);
+      if (rateCheck.limited) {
+        setRateLimitInfo(rateCheck);
+      } else {
+        setRateLimitInfo({ attemptsLeft: rateCheck.attemptsLeft });
+      }
+    }
+  }, [phone]);
+
   // Resend OTP
   const handleResendOtp = async () => {
     if (countdown > 0) return;
+
+    // Check rate limit before resending
+    const rawPhone = getRawPhone(phone);
+    const rateCheck = checkRateLimit(rawPhone);
+    if (rateCheck.limited) {
+      setError(rateCheck.message);
+      setRateLimitInfo(rateCheck);
+      return;
+    }
+
     await handleSendOtp();
   };
 
@@ -298,7 +433,16 @@ export function PhoneLoginButton({ onSuccess, onError }) {
         </div>
 
         {error && (
-          <p className="text-sm text-red-500 text-center">{error}</p>
+          <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          </div>
+        )}
+
+        {rateLimitInfo?.attemptsLeft && !error && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            Залишилось спроб: {rateLimitInfo.attemptsLeft.phone} на цей номер, {rateLimitInfo.attemptsLeft.daily} на сьогодні
+          </p>
         )}
 
         <button
