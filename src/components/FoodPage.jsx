@@ -17,15 +17,16 @@ function getLocalUserId() {
   return localId;
 }
 
-// Categories for food
+// Categories for food with default price units
 export const categories = [
   { id: 'all', name: 'Все', icon: '🍽️' },
-  { id: 'homemade', name: 'Домашня їжа', icon: '🥘' },
-  { id: 'ukrainian', name: 'Продукти з України', icon: '🇺🇦' },
-  { id: 'baking', name: 'Випічка', icon: '🥐' },
-  { id: 'drinks', name: 'Напої', icon: '🍷' },
-  { id: 'sweets', name: 'Солодощі', icon: '🍬' },
-  { id: 'preserves', name: 'Консервація', icon: '🫙' },
+  { id: 'homemade', name: 'Домашня їжа', icon: '🥘', units: ['за порцію', 'за 1 кг', 'за упаковку'] },
+  { id: 'ukrainian', name: 'Продукти з України', icon: '🇺🇦', units: ['за упаковку', 'за 1 кг', 'за штуку'] },
+  { id: 'baking', name: 'Випічка', icon: '🥐', units: ['за штуку', 'за упаковку', 'за торт'] },
+  { id: 'drinks', name: 'Напої', icon: '🍷', units: ['за 1л', 'за 0.5л', 'за пляшку', 'за банку'] },
+  { id: 'sweets', name: 'Солодощі', icon: '🍬', units: ['за упаковку', 'за 1 кг', 'за торт', 'за штуку'] },
+  { id: 'preserves', name: 'Консервація', icon: '🫙', units: ['за банку', 'за 1л', 'за 0.5л'] },
+  { id: 'other', name: 'Інше', icon: '📦', units: ['за штуку', 'за упаковку', 'за 1 кг'] },
 ];
 
 export const cities = [
@@ -139,14 +140,18 @@ function AddFoodForm({ onClose, onAdd, editItem = null }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ціна (€)</label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="0"
-              />
+              <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ціна</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  className="w-full p-3 pr-8 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  placeholder="0"
+                  min="0"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">€</span>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2 dark:text-gray-200">Одиниця</label>
@@ -155,14 +160,9 @@ function AddFoodForm({ onClose, onAdd, editItem = null }) {
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
-                <option value="за порцію">за порцію</option>
-                <option value="за 1 кг">за 1 кг</option>
-                <option value="за упаковку">за упаковку</option>
-                <option value="за банку">за банку</option>
-                <option value="за 0.5л">за 0.5л</option>
-                <option value="за 1л">за 1л</option>
-                <option value="за торт">за торт</option>
-                <option value="за штуку">за штуку</option>
+                {(categories.find(c => c.id === formData.category)?.units || ['за штуку']).map(unit => (
+                  <option key={unit} value={unit}>{unit}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -215,13 +215,19 @@ function AddFoodForm({ onClose, onAdd, editItem = null }) {
 
           <div>
             <label className="block text-sm font-medium mb-2 dark:text-gray-200">Telegram</label>
-            <input
-              type="text"
-              value={formData.telegram}
-              onChange={(e) => setFormData({ ...formData, telegram: e.target.value })}
-              className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="@username"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">@</span>
+              <input
+                type="text"
+                value={formData.telegram.replace(/^@/, '')}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/^@/, '');
+                  setFormData({ ...formData, telegram: value ? `@${value}` : '' });
+                }}
+                className="w-full pl-8 p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="username"
+              />
+            </div>
           </div>
 
           <button

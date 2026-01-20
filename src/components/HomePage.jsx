@@ -1,7 +1,7 @@
 import { Card, SectionTitle } from './Layout';
 import { guideCategories } from '../data/categories';
 import { mockNews } from '../data/news';
-import { ChevronRight, Heart, Info, Pin } from 'lucide-react';
+import { ChevronRight, Heart, Info, Pin, MessageCircle } from 'lucide-react';
 
 // Emergency contacts data
 const emergencyContacts = [
@@ -31,22 +31,38 @@ export function HomePage({ onNavigate }) {
     return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
   };
 
+  const handleContactClick = () => {
+    // TODO: Implement contact functionality
+    alert('Контакти будуть додані найближчим часом');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-yellow-400 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
-        <div className="absolute top-2 left-2 opacity-20 text-6xl">🇧🇪</div>
-        <div className="absolute bottom-2 right-2 opacity-20 text-6xl">🇺🇦</div>
+      {/* Hero Section - Reduced height */}
+      <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-yellow-400 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute top-1 left-1 opacity-15 text-4xl">🇧🇪</div>
+        <div className="absolute bottom-1 right-1 opacity-15 text-4xl">🇺🇦</div>
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">🇧🇪</span>
-            <span className="text-lg">❤️</span>
-            <span className="text-2xl">🇺🇦</span>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-xl">🇧🇪</span>
+                <span className="text-sm">❤️</span>
+                <span className="text-xl">🇺🇦</span>
+              </div>
+              <h1 className="text-xl font-bold">Ласкаво просимо!</h1>
+              <p className="text-blue-100 text-xs mt-1">
+                Ваш помічник для життя в Бельгії
+              </p>
+            </div>
+            <button
+              onClick={handleContactClick}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-medium transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Контакти
+            </button>
           </div>
-          <h1 className="text-2xl font-bold mb-2">Ласкаво просимо!</h1>
-          <p className="text-blue-100 text-sm leading-relaxed">
-            Ваш помічник для життя в Бельгії. Гайди, послуги та оголошення для українців.
-          </p>
         </div>
       </div>
 
