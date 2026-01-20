@@ -131,10 +131,15 @@ export function AuthProvider({ children }) {
           .single();
 
         if (!existingProfile) {
+          // Generate unique username: user + random number
+          const randomNum = Math.floor(10000 + Math.random() * 90000);
+          const defaultUsername = `user${randomNum}`;
+
           await supabase.from('profiles').insert({
             id: data.user.id,
             phone: phone,
-            name: 'Користувач',
+            name: defaultUsername,
+            needs_username_change: true,
           });
         }
 

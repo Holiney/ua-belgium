@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, SectionTitle } from './Layout';
 import { LoginPage } from './PhoneLogin';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { supabase, isBackendReady, getListings, deleteListing } from '../lib/supabase';
+import { compressImage } from './ui/ImageUpload';
 import {
   User,
   LogOut,
@@ -23,7 +24,9 @@ import {
   HelpCircle,
   Camera,
   Package,
-  Trash2
+  Trash2,
+  X,
+  AlertCircle
 } from 'lucide-react';
 
 const cityNames = {
@@ -37,15 +40,117 @@ const cityNames = {
   other: 'Інше',
 };
 
+// Username Change Modal Component
+function UsernameChangeModal({ currentName, onSave, onClose }) {
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const trimmed = username.trim();
+
+    if (trimmed.length < 2) {
+      setError("Ім'я повинно містити мінімум 2 символи");
+      return;
+    }
+
+    if (trimmed.length > 30) {
+      setError("Ім'я занадто довге (макс. 30 символів)");
+      return;
+    }
+
+    // Check if it's still a default username pattern
+    if (/^user\d+$/i.test(trimmed)) {
+      setError("Будь ласка, оберіть унікальне ім'я");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave(trimmed);
+    } catch (err) {
+      setError(err.message || 'Помилка збереження');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 animate-fade-in">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <User className="w-8 h-8 text-blue-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Вітаємо в UA Belgium!
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Оберіть ім'я для вашого профілю
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Ваше ім'я *
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setError('');
+              }}
+              placeholder="Наприклад: Олена"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              autoFocus
+              required
+            />
+            {error && (
+              <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving || !username.trim()}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Зберігаємо...' : 'Продовжити'}
+          </button>
+        </form>
+
+        <p className="mt-4 text-xs text-center text-gray-400 dark:text-gray-500">
+          Ви зможете змінити ім'я пізніше в налаштуваннях
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function ProfilePage({ onNavigate }) {
-  const { user, profile, isAuthenticated, loading, signOut, updateProfile } = useAuth();
+  const { user, profile, isAuthenticated, loading, signOut, updateProfile, refreshProfile } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [myListings, setMyListings] = useState({ products: [], food: [], rentals: [] });
   const [listingsLoading, setListingsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('listings');
   const [editingProfile, setEditingProfile] = useState(false);
   const [localProfile, setLocalProfile] = useState(() => loadFromStorage('user-profile', null));
   const [editForm, setEditForm] = useState({ name: '', phone: '', city: '' });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef(null);
+
+  // Check if username change is needed
+  useEffect(() => {
+    if (profile && (profile.needs_username_change || /^user\d+$/i.test(profile.name))) {
+      setShowUsernameModal(true);
+    }
+  }, [profile]);
 
   // Load listings from Supabase or localStorage
   useEffect(() => {
@@ -145,6 +250,95 @@ export function ProfilePage({ onNavigate }) {
     saveToStorage('user-profile', updatedProfile);
     setLocalProfile(updatedProfile);
     setEditingProfile(false);
+  };
+
+  const handleUsernameChange = async (newUsername) => {
+    if (isBackendReady && user) {
+      const { error } = await updateProfile({
+        name: newUsername,
+        needs_username_change: false,
+      });
+
+      if (error) {
+        throw error;
+      }
+    }
+
+    // Update locally
+    const updatedProfile = { ...localProfile, name: newUsername, needs_username_change: false };
+    saveToStorage('user-profile', updatedProfile);
+    setLocalProfile(updatedProfile);
+    setShowUsernameModal(false);
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Будь ласка, виберіть зображення');
+      return;
+    }
+
+    setUploadingPhoto(true);
+
+    try {
+      // Compress image
+      const compressed = await compressImage(file, {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.8,
+      });
+
+      if (isBackendReady && user && supabase) {
+        // Upload to Supabase Storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        // Convert base64 to blob
+        const response = await fetch(compressed);
+        const blob = await response.blob();
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, blob, {
+            upsert: true,
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          // Fallback to base64 storage
+          await updateProfile({ avatar_url: compressed });
+        } else {
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+          await updateProfile({ avatar_url: publicUrl });
+        }
+      } else {
+        // Store as base64 locally
+        const updatedProfile = { ...localProfile, avatar_url: compressed };
+        saveToStorage('user-profile', updatedProfile);
+        setLocalProfile(updatedProfile);
+      }
+
+      if (refreshProfile) {
+        refreshProfile();
+      }
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      alert('Помилка завантаження фото');
+    } finally {
+      setUploadingPhoto(false);
+      // Reset input
+      if (photoInputRef.current) {
+        photoInputRef.current.value = '';
+      }
+    }
   };
 
   const handleDeleteListing = async (type, itemId) => {
@@ -308,8 +502,23 @@ export function ProfilePage({ onNavigate }) {
                   </span>
                 </div>
               )}
-              <button className="absolute bottom-0 right-0 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700">
-                <Camera className="w-4 h-4 text-gray-500" />
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="absolute bottom-0 right-0 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                {uploadingPhoto ? (
+                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4 text-gray-500" />
+                )}
               </button>
             </div>
 
@@ -605,6 +814,14 @@ export function ProfilePage({ onNavigate }) {
         <LoginPage
           onClose={() => setShowLogin(false)}
           onSuccess={() => setShowLogin(false)}
+        />
+      )}
+
+      {showUsernameModal && (
+        <UsernameChangeModal
+          currentName={currentProfile?.name}
+          onSave={handleUsernameChange}
+          onClose={() => setShowUsernameModal(false)}
         />
       )}
     </div>

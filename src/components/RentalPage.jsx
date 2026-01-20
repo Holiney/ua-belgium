@@ -261,13 +261,19 @@ function AddRentalForm({ onClose, onAdd, editItem = null }) {
 
           <div>
             <label className="block text-sm font-medium mb-2 dark:text-gray-200">Telegram</label>
-            <input
-              type="text"
-              value={formData.telegram}
-              onChange={(e) => setFormData({ ...formData, telegram: e.target.value })}
-              className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="@username"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">@</span>
+              <input
+                type="text"
+                value={formData.telegram.replace(/^@/, '')}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/^@/, '');
+                  setFormData({ ...formData, telegram: value ? `@${value}` : '' });
+                }}
+                className="w-full pl-8 p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="username"
+              />
+            </div>
           </div>
 
           <button
